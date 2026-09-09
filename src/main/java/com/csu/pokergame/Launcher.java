@@ -1,6 +1,7 @@
 package com.csu.pokergame;
 
 import com.csu.pokergame.ui.AppShell;
+import com.csu.pokergame.ui.RouteTable;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
@@ -21,7 +22,8 @@ public class Launcher extends Application {
 
         Scene scene = new Scene(new StackPane(), 1100, 720);
         AppShell shell = new AppShell(scene);
-        shell.showHome();
+        RouteTable.install(shell);
+        shell.navigate("home");
         stage.setScene(scene);
         stage.show();
     }

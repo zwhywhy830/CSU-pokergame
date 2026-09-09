@@ -90,7 +90,7 @@ public final class LiarTableView extends BorderPane {
 
         // 顶部：返回 | 目标点数 | 设置
         Button back = new Button("返回游戏选择");
-        back.setOnAction(e -> shell.showGameModes());
+        back.setOnAction(e -> shell.navigate("game-modes"));
         Button settings = new Button("设置");
         settings.setOnAction(e -> showSettings());
         targetLabel.getStyleClass().add("target-label");
@@ -439,9 +439,9 @@ public final class LiarTableView extends BorderPane {
 
         Button again = new Button("重新开始");
         again.getStyleClass().add("primary");
-        again.setOnAction(e -> shell.startLiar());
+        again.setOnAction(e -> shell.navigate("liar"));
         Button back = new Button("返回游戏选择");
-        back.setOnAction(e -> shell.showGameModes());
+        back.setOnAction(e -> shell.navigate("game-modes"));
 
         HBox buttons = new HBox(12, again, back);
         buttons.setAlignment(Pos.CENTER);

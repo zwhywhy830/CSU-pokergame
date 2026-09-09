@@ -31,7 +31,7 @@ public final class HomeView extends BorderPane {
         Button start = new Button("开始游戏");
         start.getStyleClass().add("primary");
         start.setPrefWidth(200);
-        start.setOnAction(e -> shell.showGameModes());
+        start.setOnAction(e -> shell.navigate("game-modes"));
 
         center.getChildren().addAll(title, subtitle, start);
         setCenter(center);

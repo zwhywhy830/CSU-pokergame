@@ -20,7 +20,7 @@ public final class LocalGameSelectView extends BorderPane {
 
         // 顶部：左返回模式选择，中间标题，右设置
         Button back = new Button("返回模式选择");
-        back.setOnAction(e -> shell.showGameModes());
+        back.setOnAction(e -> shell.navigate("game-modes"));
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());
         Label title = new Label("本地对战 · 选择游戏");
@@ -37,10 +37,10 @@ public final class LocalGameSelectView extends BorderPane {
         cards.setAlignment(Pos.CENTER);
         cards.setPadding(new Insets(48, 16, 16, 16));
         cards.getChildren().add(gameCard("湖南跑得快",
-                "三人各自为战，有大必出，最先出完获胜", shell::startPdk));
+                "三人各自为战，有大必出，最先出完获胜", () -> shell.navigate("pdk")));
         cards.getChildren().add(gameCard("骗子酒馆",
                 "四人淘汰制，每人一把 6 仓手枪，质疑失败扣扳机",
-                shell::startLiar));
+                () -> shell.navigate("liar")));
         setCenter(cards);
     }
 

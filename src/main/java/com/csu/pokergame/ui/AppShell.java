@@ -1,29 +1,26 @@
 package com.csu.pokergame.ui;
 
-import com.csu.pokergame.network.GameType;
-import com.csu.pokergame.network.LanClient;
-import com.csu.pokergame.network.LanHost;
-import com.csu.pokergame.core.engine.PlayerId;
-import com.csu.pokergame.ui.scene.GameModeView;
-import com.csu.pokergame.ui.scene.HomeView;
-import com.csu.pokergame.ui.scene.LanGameTableView;
-import com.csu.pokergame.ui.scene.LanLobbyView;
-import com.csu.pokergame.ui.scene.LiarTableView;
-import com.csu.pokergame.ui.scene.LocalGameSelectView;
-import com.csu.pokergame.ui.scene.PdkTableView;
-import com.csu.pokergame.ui.scene.RulesView;
 import com.csu.pokergame.ui.scene.SettingsOverlay;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.Parent;
 import javafx.scene.layout.StackPane;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 应用外壳：管理单一 Scene 与页面切换。
- * 后续 UI 人员可替换各 View 的实现，只需保持 {@code startPdk / startLiar / showHome} 契约。
+ *
+ * <p>采用注册表模式：每个页面通过 {@link #register(String, Supplier)} 注册路由名，
+ * 切换时调用 {@link #navigate(String)} 即可。新增页面不再修改本类，
+ * 只在自己的 View 内或 {@code RouteTable} 中注册一行。
  */
 public final class AppShell {
 
     private final StackPane root = new StackPane();
+    private final Map<String, Supplier<Parent>> routes = new HashMap<>();
 
     public AppShell(Scene scene) {
         root.getStyleClass().add("root");
@@ -32,42 +29,25 @@ public final class AppShell {
                 .getResource("/com/csu/pokergame/ui/theme/app.css").toExternalForm());
     }
 
-    public void showHome() {
-        root.getChildren().setAll(new HomeView(this));
+    /**
+     * 注册页面路由。
+     *
+     * @param name    路由名（如 "home"、"pdk"）
+     * @param factory 造页面的工厂，每次 navigate 时调用
+     */
+    public void register(String name, Supplier<Parent> factory) {
+        routes.put(name, factory);
     }
 
-    public void showGameModes() {
-        root.getChildren().setAll(new GameModeView(this));
-    }
-
-    public void showLocalGameSelect() {
-        root.getChildren().setAll(new LocalGameSelectView(this));
-    }
-
-    public void showLanLobby() {
-        root.getChildren().setAll(new LanLobbyView(this));
-    }
-
-    public void startPdk() {
-        root.getChildren().setAll(new PdkTableView(this));
-    }
-
-    public void startLiar() {
-        root.getChildren().setAll(new LiarTableView(this));
-    }
-
-    /** 进入联机桌面(主机视角)。 */
-    public void openLanHostTable(LanHost host) {
-        root.getChildren().setAll(new LanGameTableView(this, host));
-    }
-
-    /** 进入联机桌面(客户端视角)。 */
-    public void openLanClientTable(LanClient client, GameType type, PlayerId seat, String hostIp) {
-        root.getChildren().setAll(new LanGameTableView(this, client, type, seat, hostIp));
-    }
-
-    public void showRules() {
-        root.getChildren().setAll(new RulesView(this));
+    /**
+     * 切换到指定路由页面。未注册的路由名会抛出异常。
+     */
+    public void navigate(String name) {
+        Supplier<Parent> factory = routes.get(name);
+        if (factory == null) {
+            throw new IllegalArgumentException("未注册的路由: " + name);
+        }
+        root.getChildren().setAll(factory.get());
     }
 
     /** 在当前页面之上叠加设置弹层（不破坏底层页面状态）。 */

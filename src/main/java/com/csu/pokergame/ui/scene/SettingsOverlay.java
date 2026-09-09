@@ -38,21 +38,21 @@ public final class SettingsOverlay extends StackPane {
         viewRules.getStyleClass().addAll("primary", "settings-button");
         viewRules.setOnAction(e -> {
             shell.closeSettings();
-            shell.showRules();
+            shell.navigate("rules");
         });
 
         Button home = new Button("返回主页");
         home.getStyleClass().add("settings-button");
         home.setOnAction(e -> {
             shell.closeSettings();
-            shell.showHome();
+            shell.navigate("home");
         });
 
         Button gameModes = new Button("返回游戏选择");
         gameModes.getStyleClass().add("settings-button");
         gameModes.setOnAction(e -> {
             shell.closeSettings();
-            shell.showGameModes();
+            shell.navigate("game-modes");
         });
 
         Separator sep = new Separator();

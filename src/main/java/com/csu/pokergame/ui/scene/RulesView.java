@@ -22,7 +22,7 @@ public final class RulesView extends BorderPane {
         setPadding(new Insets(16));
 
         Button back = new Button("返回");
-        back.setOnAction(e -> shell.showGameModes());
+        back.setOnAction(e -> shell.navigate("game-modes"));
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());
         Label heading = new Label("游戏规则");

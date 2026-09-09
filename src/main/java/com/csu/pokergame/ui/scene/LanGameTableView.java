@@ -419,7 +419,7 @@ public final class LanGameTableView extends BorderPane {
         if (client != null) {
             client.shutdown();
         }
-        shell.showLanLobby();
+        shell.navigate("lan-lobby");
     }
 
     private String name(PlayerId p) {

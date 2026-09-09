@@ -37,7 +37,7 @@ public final class LanLobbyView extends BorderPane {
         Button back = new Button("返回模式选择");
         back.setOnAction(e -> {
             shutdownAll();
-            shell.showGameModes();
+            shell.navigate("game-modes");
         });
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());
@@ -155,7 +155,8 @@ public final class LanLobbyView extends BorderPane {
         startBtn.setOnAction(e -> {
             try {
                 host.startGame();
-                shell.openLanHostTable(host);
+                shell.register("lan-host-table", () -> new LanGameTableView(shell, host));
+                shell.navigate("lan-host-table");
             } catch (Exception ex) {
                 // 不应发生,因为按钮 disable
             }
@@ -164,7 +165,7 @@ public final class LanLobbyView extends BorderPane {
         Button cancel = new Button("取消并返回");
         cancel.setOnAction(e -> {
             shutdownAll();
-            shell.showLanLobby();
+            shell.navigate("lan-lobby");
         });
 
         roomBox.getChildren().addAll(title, addr, playersTitle, playersBox, startBtn, cancel);
@@ -183,7 +184,7 @@ public final class LanLobbyView extends BorderPane {
 
         host.setOnEnded(reason -> Platform.runLater(() -> {
             shutdownAll();
-            shell.showLanLobby();
+            shell.navigate("lan-lobby");
         }));
 
         // 触发首次广播
@@ -212,7 +213,7 @@ public final class LanLobbyView extends BorderPane {
         Button leave = new Button("离开房间");
         leave.setOnAction(e -> {
             shutdownAll();
-            shell.showLanLobby();
+            shell.navigate("lan-lobby");
         });
 
         roomBox.getChildren().addAll(title, status, playersTitle, playersBox, leave);
@@ -230,7 +231,8 @@ public final class LanLobbyView extends BorderPane {
                     + "/" + snapshot.gameType().requiredPlayers() + ")");
         }));
         client.setOnStartGame((type, seat) -> Platform.runLater(() -> {
-            shell.openLanClientTable(client, type, seat, hostIp);
+            shell.register("lan-client-table", () -> new LanGameTableView(shell, client, type, seat, hostIp));
+            shell.navigate("lan-client-table");
         }));
         client.setOnEnded(reason -> Platform.runLater(() -> {
             shutdownAll();
@@ -255,7 +257,7 @@ public final class LanLobbyView extends BorderPane {
 
         Button back = new Button("返回大厅");
         back.getStyleClass().add("primary");
-        back.setOnAction(e -> shell.showLanLobby());
+        back.setOnAction(e -> shell.navigate("lan-lobby"));
 
         box.getChildren().addAll(title, back);
         setCenter(box);
