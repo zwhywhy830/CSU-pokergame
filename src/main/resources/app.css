@@ -1,0 +1,736 @@
+/* JavaFX 扑克牌小游戏 样式资源 */
+
+.root {
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+    -fx-background-color: #20303f;
+}
+
+.app-root {
+    -fx-background-color: linear-gradient(to bottom, #2a3d50, #1a2733);
+}
+
+.app-toolbar {
+    -fx-background-color: linear-gradient(to bottom, #fbfaf5, #ece7da);
+    -fx-border-color: transparent transparent #c9c2b2 transparent;
+    -fx-padding: 6 8 6 8;
+}
+
+.app-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3c2a12;
+}
+
+.suit-glyph {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.glyph-red {
+    -fx-text-fill: #c62828;
+}
+
+.glyph-ink {
+    -fx-text-fill: #202020;
+}
+
+.cards-panel {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 110%, #2f4a61 0%, #223548 60%, #1a2733 100%);
+}
+
+.card-cell {
+    -fx-background-color: transparent;
+}
+
+.card-caption {
+    -fx-font-size: 11px;
+    -fx-text-fill: #f2ead6;
+    -fx-alignment: center;
+}
+
+.card-caption:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.status-label {
+    -fx-background-color: linear-gradient(to top, #161f2a, #22303e);
+    -fx-text-fill: #d9e2ea;
+    -fx-font-size: 12px;
+    -fx-border-color: #0e1620 transparent transparent transparent;
+}
+
+.button {
+    -fx-background-radius: 6;
+    -fx-padding: 4 12 4 12;
+}
+
+.toggle-button {
+    -fx-background-radius: 6;
+}
+
+.scroll-pane,
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ---------- 牌型玩法工具行 ---------- */
+.hand-tools {
+    -fx-background-color: linear-gradient(to bottom, #f3eddd, #e6deca);
+    -fx-border-color: transparent transparent #b9b0a0 transparent;
+}
+
+.hand-tip {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7a6a44;
+    -fx-alignment: center-right;
+}
+
+/* ---------- 牌型结果横幅 ---------- */
+.banner-box {
+    -fx-background-color: rgba(38, 24, 4, 0.82);
+    -fx-background-radius: 16;
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 2;
+    -fx-border-radius: 16;
+    -fx-padding: 10 30 12 30;
+    -fx-effect: dropshadow(gaussian, rgba(255, 200, 60, 0.55), 30, 0.3, 0, 0);
+}
+
+.banner-title {
+    -fx-font-size: 46px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+
+.banner-sub {
+    -fx-font-size: 15px;
+    -fx-text-fill: #fff3d0;
+}
+
+.card-cell:hover {
+    -fx-cursor: hand;
+}
+
+/* ==================== 开始界面（主页） ==================== */
+
+/* 图片背景 + 半透明墨绿遮罩（三个场景共用） */
+.bg-theme-root {
+    -fx-background-color: transparent;
+}
+
+.bg-theme-shade {
+    -fx-background-color: rgba(8, 22, 14, 0.58);
+}
+
+.menu-bg-felt {
+    -fx-background-color: linear-gradient(to bottom,
+        #152c1f 0%, #23452e 26%, #3a5731 58%, #55511f 84%, #3c3a1c 100%);
+}
+
+.menu-bg-night {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #33588f 0%, #1c3157 45%, #0a1428 100%);
+}
+
+.menu-corner {
+    -fx-font-size: 140px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Symbol", "Segoe UI";
+}
+
+/* 主标题：书法感字体 + 细金描边 + 微弱暖光（Text 节点，fill 支持渐变） */
+.menu-title {
+    -fx-font-family: "KaiTi", "楷体", "STKaiti", "SimSun", serif;
+    -fx-font-size: 84px;
+    -fx-font-weight: bold;
+    -fx-fill: linear-gradient(to bottom, #fff6cf 0%, #f6d878 45%, #d9a62e 100%);
+    -fx-stroke: #8a5a05;
+    -fx-stroke-width: 1.4;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 110, 0.30), 16, 0.5, 0, 0);
+}
+
+/* 右下角技术备注（原副标题降噪后移到底角） */
+.tech-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(242, 238, 215, 0.55);
+    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+/* 三个按钮共用：柔和大圆角 + 高度一致，宽度由下方权重类控制 */
+.menu-btn {
+    -fx-background-radius: 34;
+    -fx-border-radius: 34;
+    -fx-min-height: 68px;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+/* 主按钮：开始游戏（最宽、最亮，带内高光模拟凸起） */
+.menu-btn-start {
+    -fx-min-width: 356px;
+    -fx-font-size: 24px;
+    -fx-background-color: linear-gradient(to bottom, #ffefa2 0%, #ffd86b 30%, #f6b41e 72%, #d7910a 100%);
+    -fx-text-fill: #4a2c00;
+    -fx-border-color: rgba(255, 244, 200, 0.95) rgba(209, 156, 26, 0.75) rgba(168, 116, 8, 0.75) rgba(255, 244, 200, 0.95);
+    -fx-border-width: 1.5;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 16, 0.3, 0, 4),
+                 innershadow(gaussian, rgba(255, 255, 255, 0.55), 10, 0.18, 0, -2);
+}
+
+.menu-btn-start:hover {
+    -fx-background-color: linear-gradient(to bottom, #fff4bd 0%, #ffe387 30%, #ffc640 72%, #eda50f 100%);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.55), 26, 0.4, 0, 0),
+                 innershadow(gaussian, rgba(255, 255, 255, 0.60), 10, 0.18, 0, -2);
+}
+
+.menu-btn-start:pressed {
+    -fx-background-color: linear-gradient(to bottom, #e0a313, #c88707);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 8, 0.3, 0, 1);
+}
+
+/* 次按钮：游戏规则（墨绿底 + 金字金边） */
+.menu-btn-rules {
+    -fx-min-width: 258px;
+    -fx-background-color: linear-gradient(to bottom, #2f6140, #1f4528);
+    -fx-text-fill: #ffe9b0;
+    -fx-border-color: rgba(255, 213, 79, 0.8);
+    -fx-border-width: 1.6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 12, 0.25, 0, 3);
+}
+
+.menu-btn-rules:hover {
+    -fx-background-color: linear-gradient(to bottom, #3a7650, #2a5a39);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #ffffff;
+}
+
+.menu-btn-rules:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1c3c24, #17331f);
+}
+
+/* 弱按钮：退出游戏（深灰绿底 + 白字细边） */
+.menu-btn-quit {
+    -fx-min-width: 220px;
+    -fx-background-color: linear-gradient(to bottom, #3a453e, #232c27);
+    -fx-text-fill: rgba(255, 255, 255, 0.88);
+    -fx-border-color: rgba(255, 255, 255, 0.32);
+    -fx-border-width: 1.2;
+}
+
+.menu-btn-quit:hover {
+    -fx-background-color: linear-gradient(to bottom, #4a574f, #2e3a33);
+    -fx-border-color: rgba(255, 255, 255, 0.62);
+    -fx-text-fill: #ffffff;
+}
+
+.menu-btn-quit:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1d241f, #171c18);
+}
+
+/* 返回主页（扑克牌页工具栏里的链接按钮） */
+.btn-home {
+    -fx-background-color: transparent;
+    -fx-text-fill: #3c2a12;
+    -fx-cursor: hand;
+}
+
+.btn-home:hover {
+    -fx-text-fill: #8a5a00;
+    -fx-underline: true;
+}
+
+/* ==================== 设置齿轮与浮层面板 ==================== */
+.settings-btn {
+    -fx-background-color: rgba(0, 0, 0, 0.30);
+    -fx-background-radius: 50%;
+    -fx-min-width: 54px;
+    -fx-min-height: 54px;
+    -fx-cursor: hand;
+    -fx-border-color: rgba(255, 213, 79, 0.38);
+    -fx-border-width: 1.4;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 12, 0.3, 0, 3);
+}
+
+.settings-btn:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.22);
+    -fx-border-color: #ffd54f;
+}
+
+.gear-icon {
+    -fx-fill: #f2f6ee;
+}
+
+.modal-shade {
+    -fx-background-color: rgba(0, 0, 0, 0.38);
+}
+
+.settings-panel {
+    -fx-background-color: linear-gradient(to bottom, #fdfbf4, #f0ebdb);
+    -fx-background-radius: 14;
+    -fx-border-color: #cbbfa0;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 20 22 18 22;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 26, 0.25, 0, 8);
+}
+
+.settings-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3c2a12;
+}
+
+.settings-section {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8a7a58;
+}
+
+.settings-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9b8d6f;
+}
+
+.settings-foot {
+    -fx-font-size: 11px;
+    -fx-text-fill: #a99c7e;
+    -fx-alignment: center;
+}
+
+.settings-link-btn {
+    -fx-background-color: #efe6cf;
+    -fx-background-radius: 8;
+    -fx-border-color: #d6c9a8;
+    -fx-border-radius: 8;
+    -fx-text-fill: #5b4720;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.settings-link-btn:hover {
+    -fx-background-color: #e3d6b6;
+}
+
+.icon-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8a7a58;
+    -fx-font-size: 17px;
+    -fx-cursor: hand;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+}
+
+.icon-close:hover {
+    -fx-text-fill: #c62828;
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+    -fx-background-radius: 15;
+}
+
+.seg-toggle {
+    -fx-background-radius: 16;
+    -fx-padding: 5 16 5 16;
+    -fx-cursor: hand;
+}
+
+.seg-toggle:selected {
+    -fx-background-color: #3f9a63;
+    -fx-text-fill: white;
+}
+
+/* ==================== 设置：音量 / 亮度 ==================== */
+.brightness-shade {
+    -fx-background-color: rgba(0, 0, 0, 0.9);
+}
+
+.settings-row-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5b4720;
+    -fx-min-width: 40px;
+}
+
+.value-chip {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8a6a2f;
+    -fx-font-weight: bold;
+    -fx-alignment: center-right;
+    -fx-min-width: 46px;
+}
+
+.settings-slider {
+    -fx-pref-width: 150px;
+}
+
+.settings-slider .track {
+    -fx-background-color: #ddd2b4;
+    -fx-background-radius: 4;
+    -fx-pref-height: 6;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #c9982f;
+}
+
+.settings-slider .colored-track {
+    -fx-background-color: #e5b54a;
+}
+
+.settings-slider:hover .thumb {
+    -fx-background-color: #a06c10;
+}
+
+/* ==================== 规则界面 ==================== */
+.rules-bg {
+    -fx-background-color:
+        linear-gradient(to bottom, #254460 0%, #12263c 55%, #0c1a29 100%);
+}
+
+.rules-card {
+    -fx-background-color: linear-gradient(to bottom, #fffdf6, #f4efdf);
+    -fx-background-radius: 18;
+    -fx-border-color: #c9bc9b;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-padding: 36 50 30 50;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 30, 0.3, 0, 8);
+}
+
+.rules-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a5c1d;
+}
+
+.rules-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: #9b8d6f;
+}
+
+.rules-sec-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+}
+
+.rules-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: #4a3c22;
+    -fx-line-spacing: 3;
+}
+
+.rules-back {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6b5a35;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-border-color: #c9b98f;
+    -fx-border-radius: 18;
+    -fx-background-radius: 18;
+    -fx-padding: 8 22 8 22;
+    -fx-max-width: 200px;
+}
+
+.rules-back:hover {
+    -fx-background-color: #efe3bd;
+    -fx-text-fill: #5b3a00;
+}
+
+/* 规则正文（Markdown 风格渲染） */
+.rules-body {
+    -fx-padding: 2 0 2 0;
+}
+
+.rules-h1 {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f6b4f;
+    -fx-padding: 10 0 2 0;
+}
+
+.rules-h2 {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+    -fx-padding: 8 0 0 0;
+}
+
+.rules-run {
+    -fx-font-size: 14px;
+    -fx-fill: #46391f;
+    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+.rules-strong {
+    -fx-font-weight: bold;
+    -fx-fill: #a03a00;
+}
+
+.rules-quote {
+    -fx-fill: #8d7f5f;
+    -fx-font-style: italic;
+}
+
+.rules-card .separator {
+    -fx-padding: 8 0 4 0;
+}
+
+.rules-card .separator .line {
+    -fx-border-color: #dccfae;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ==================== 游戏选择界面（开始游戏后） ==================== */
+.game-choice-bg {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #2f5440 0%, #1c3a2a 45%, #0f1f15 100%);
+}
+
+/* 大标题：字号略微缩小、字重柔和，配轻微暖光 */
+.game-choice-title {
+    -fx-font-size: 44px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #ffe6a0;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 120, 0.22), 14, 0.35, 0, 2);
+}
+
+/* 副标题：保持次要层级但保证可读性（暗绿底上需 ≥0.75 不透明度） */
+.game-choice-sub {
+    -fx-font-size: 15px;
+    -fx-text-fill: rgba(226, 236, 246, 0.78);
+}
+
+/* 游戏入口卡片：idle/hover/pressed 各态底色必须在此显式声明，
+   否则 CSS 重算时会回退到 modena 默认 .button 的浅色底（表现为闪白）；
+   DeckApp.styleGameCard 的 hover 动画在此基础上平滑插值 */
+.game-option {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(225, 230, 236, 0.30);
+    -fx-border-width: 2;
+    -fx-border-radius: 22;
+    -fx-padding: 2;
+    -fx-cursor: hand;
+    /* 宽度随窗口自适应（HBox hgrow 平分），小窗口下自动收窄不溢出屏幕 */
+    -fx-min-width: 380px;
+    -fx-pref-width: 470px;
+    -fx-max-width: 540px;
+    /* 高度下限必须高于内部 VBox 内容总高（圆徽92+标题+两行简介+标签+间距+内边距≈285），
+       否则小窗口下文字会溢出卡片圆角边界 */
+    -fx-min-height: 296px;
+    -fx-pref-height: 306px;
+    -fx-max-height: 340px;
+}
+
+/* 悬浮态：金色高亮（仅鼠标移到该卡片时生效；颜色与 DeckApp.styleGameCard 动画终态一致） */
+.game-option:hover {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 246, 205, 0.30), rgba(255, 213, 79, 0.17));
+    -fx-border-color: rgba(255, 230, 160, 0.98);
+}
+
+.game-option:pressed {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 246, 205, 0.38), rgba(255, 213, 79, 0.24));
+    -fx-border-color: rgba(255, 230, 160, 0.98);
+}
+
+/* 悬浮时卡片内的图标描边、标题、标签同步转为金色高亮 */
+.game-option:hover .game-icon-badge {
+    -fx-border-color: rgba(255, 226, 150, 0.98);
+}
+
+.game-option:hover .game-option-title {
+    -fx-text-fill: #ffedbd;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 120, 0.35), 12, 0.3, 0, 0);
+}
+
+/* 悬浮时卡片转金色调，简介同步转暖白色（冷灰蓝在金底上会发灰；金罩半透明偏暗，浅字对比更高） */
+.game-option:hover .game-option-desc {
+    -fx-text-fill: #fdf0cf;
+}
+
+.game-option:hover .game-option-tag {
+    -fx-text-fill: #4a3200;
+    -fx-border-color: rgba(255, 240, 200, 0.9);
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 224, 130, 0.96), rgba(232, 172, 56, 0.96));
+}
+
+/* 图标金属圆徽：深色金属底 + 顶部内高光 + 细金描边 */
+.game-icon-badge {
+    -fx-min-width: 92px;
+    -fx-min-height: 92px;
+    -fx-max-width: 92px;
+    -fx-max-height: 92px;
+    -fx-background-radius: 50;
+    -fx-background-color:
+        radial-gradient(center 50% 32%, radius 68%,
+            #454d55 0%, #2b3137 52%, #161a1e 100%);
+    -fx-border-color: rgba(220, 184, 96, 0.85);
+    -fx-border-width: 2;
+    -fx-border-radius: 50;
+    -fx-effect:
+        innershadow(gaussian, rgba(255, 255, 255, 0.28), 14, 0.25, 0, -3),
+        dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0.35, 0, 5);
+}
+
+.game-icon-glyph {
+    -fx-font-smoothing-type: lcd;
+}
+
+/* 卡片内标题：加粗放大；常态白色，悬浮时随卡片转金色（见上方 hover 规则） */
+.game-option-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f4f7fa;
+}
+
+/* 简介文字：次级层级（字号小），但不透明度提到 0.88 保证暗底上清晰 */
+.game-option-desc {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: rgba(224, 232, 242, 0.88);
+    -fx-line-spacing: 3;
+}
+
+/* 底部标签：圆角小药丸 + 底色填充；常态浅瓷白，悬浮时变金色填充（见上方 hover 规则） */
+.game-option-tag {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f7fafd;
+    -fx-border-color: rgba(255, 255, 255, 0.38);
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-background-color: rgba(255, 255, 255, 0.20);
+    -fx-padding: 5 16 5 16;
+}
+
+/* 返回按钮：用深墨色半透明底（而非白色罩染），保证压在山水 / 金色八角边框 /
+   角花等任何装饰层之上时文字对比都稳定；与同页齿轮按钮风格一致 */
+.game-back {
+    -fx-background-color: rgba(8, 18, 12, 0.48);
+    -fx-text-fill: #f5f8f3;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 24;
+    -fx-background-radius: 24;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+}
+
+.game-back:hover {
+    -fx-background-color: rgba(8, 18, 12, 0.68);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #ffffff;
+}
+
+/* ==================== 玩法模式选择界面（点击游戏卡片后） ==================== */
+.mode-bg {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #264838 0%, #173025 45%, #0a1810 100%);
+}
+
+/* 玩家头像 + 昵称卡片（模式选择页右上角，与左上角“返回”按钮对称呼重） */
+.user-card {
+    -fx-background-color: rgba(8, 18, 12, 0.48);
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 28;
+    -fx-background-radius: 28;
+    -fx-padding: 8 18 8 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0.3, 0, 3);
+}
+
+/* 头像圆徽：复用页内金属圆徽配色，保证视觉一致 */
+.user-avatar {
+    -fx-min-width: 46px;
+    -fx-min-height: 46px;
+    -fx-max-width: 46px;
+    -fx-max-height: 46px;
+    -fx-background-radius: 50;
+    -fx-background-color:
+        radial-gradient(center 50% 32%, radius 68%,
+            #454d55 0%, #2b3137 52%, #161a1e 100%);
+    -fx-border-color: rgba(220, 184, 96, 0.85);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 50;
+    -fx-effect:
+        innershadow(gaussian, rgba(255, 255, 255, 0.28), 8, 0.25, 0, -2),
+        dropshadow(gaussian, rgba(0, 0, 0, 0.45), 8, 0.35, 0, 3);
+}
+
+.user-nick {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f8f3;
+}
+
+.user-stat {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245, 248, 243, 0.65);
+}
+
+/* ==================== 主页：游戏规则弹窗 ==================== */
+.rules-modal-card {
+    -fx-background-color: linear-gradient(to bottom, #fffdf6, #f1ecdc);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(216, 177, 77, 0.9);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 20;
+    -fx-padding: 22 30 16 30;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 34, 0.3, 0, 10);
+}
+
+.rules-modal-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+}
+
+.rules-tab {
+    -fx-background-radius: 16;
+    -fx-padding: 6 24 6 24;
+    -fx-background-color: transparent;
+    -fx-text-fill: #7a6535;
+    -fx-border-color: rgba(0, 0, 0, 0.14);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.rules-tab:hover {
+    -fx-background-color: rgba(31, 69, 40, 0.12);
+}
+
+.rules-tab:selected {
+    -fx-background-color: #2f6140;
+    -fx-text-fill: #ffe9b0;
+    -fx-border-color: #2f6140;
+}
+
+.rules-modal-foot {
+    -fx-font-size: 11px;
+    -fx-text-fill: #a99c7e;
+    -fx-alignment: center;
+}
+
+.rules-modal-card .rules-body {
+    -fx-padding: 4 6 4 2;
+}
+
+.rules-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.rules-scroll > .viewport {
+    -fx-background-color: transparent;
+}
