@@ -4,6 +4,8 @@ import com.csu.pokergame.core.engine.GameCommand;
 import com.csu.pokergame.core.engine.GameSnapshot;
 import com.csu.pokergame.core.engine.PlayerId;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -33,8 +35,26 @@ public sealed interface WireMessage
                 WireMessage.Error,
                 WireMessage.GameEnded {
 
-    /** 客户端 → 主机:请求加入房间。无 payload。 */
-    record Join() implements WireMessage {}
+    /**
+     * 客户端 → 主机:请求加入房间。
+     *
+     * @param requestedSeat 客户端请求的座位；null 表示任意空位（兼容旧版不传字段）
+     *                     非空时主机校验该座位是否空闲且非 SEAT_1，
+     *                     冲突返回 SEAT_TAKEN / SEAT_RESERVED_HOST 错误
+     */
+    record Join(PlayerId requestedSeat) implements WireMessage {
+        /** 无参构造兼容旧版客户端，等价于 requestedSeat = null。 */
+        @JsonCreator
+        public Join(
+                @JsonProperty(value = "requestedSeat", required = false) PlayerId requestedSeat) {
+            this.requestedSeat = requestedSeat;
+        }
+
+        /** 旧版无参构造：requestedSeat = null，让客户端可以 {@code new WireMessage.Join()}。 */
+        public Join() {
+            this(null);
+        }
+    }
 
     /** 主机 → 客户端:广播当前房间玩家状态。 */
     record RoomSnapshotMsg(RoomSnapshot snapshot) implements WireMessage {}
