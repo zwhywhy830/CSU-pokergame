@@ -25,6 +25,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
@@ -56,6 +57,7 @@ import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -73,9 +75,40 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
+
+import com.cards.bridge.CsuCardBridge;
+import com.csu.pokergame.core.engine.GameCommand;
+import com.csu.pokergame.core.engine.GamePhase;
+import com.csu.pokergame.core.engine.GameSnapshot;
+import com.csu.pokergame.core.engine.PlayerId;
+import com.csu.pokergame.core.player.BotDecision;
+import com.csu.pokergame.core.player.RuleBotController;
+import com.csu.pokergame.liarspoker.ChallengeDeclaration;
+import com.csu.pokergame.liarspoker.DeclareLiarCards;
+import com.csu.pokergame.liarspoker.LiarEngine;
+import com.csu.pokergame.liarspoker.LiarPhase;
+import com.csu.pokergame.liarspoker.LiarRandomPolicy;
+import com.csu.pokergame.liarspoker.LiarSnapshot;
+import com.csu.pokergame.liarspoker.TrustDeclaration;
+import com.csu.pokergame.network.GameType;
+import com.csu.pokergame.network.LanClient;
+import com.csu.pokergame.network.LanHost;
+import com.csu.pokergame.network.RoomSnapshot;
+import com.csu.pokergame.network.RoomPlayer;
+import com.csu.pokergame.paodekuai.PdkBotPolicy;
+import com.csu.pokergame.paodekuai.PdkEngine;
+import com.csu.pokergame.paodekuai.PdkSnapshot;
+import com.csu.pokergame.paodekuai.PassPdkTurn;
+import com.csu.pokergame.paodekuai.PlayPdkCards;
+
+import javafx.animation.PauseTransition;
+import javafx.scene.control.ListView;
 
 /**
  * 主程序：用 JavaFX 生成并展示整副扑克牌（54 张）。
@@ -107,11 +140,54 @@ public class DeckApp extends Application {
     private Scene gameChoiceScene;
     /** 模式选择界面：点任一游戏卡片进入，可选择本地人机 / 局域网联机。 */
     private Scene modeChoiceScene;
-    /** 模式选择界面顶部的游戏名徽标（进入时更新为当前所选游戏）。 */
+    /** 模式选择界面顶部的游戏名徽标（进入时由 enterModeChoice 更新为当前所选游戏）。 */
     private final Label modeBadge = new Label();
+    /** 加载动画页：点“开始游戏”后先短暂展示，再进入“选择游戏”页。 */
+    private Scene loadingScene;
+    /** 个人信息编辑页：点头像进入，修改昵称/头像/状态。 */
+    private Scene profileScene;
+    /** 玩家昵称 / 头像字符 / 在线状态（在个人信息页编辑后回填到选择游戏页）。 */
+    private String userNick = "玩家";
+    private String userAvatarGlyph = "♛";
+    private String userStat = "在线 · 准备开局";
+    /** 选择游戏页头像卡片内的字符、昵称、状态节点（供编辑后刷新）。 */
+    private final Text userAvatarText = new Text();
+    private final Label userNickLabel = new Label();
+    private final Label userStatLabel = new Label();
     /** 音量 / 亮度偏好（后续玩法版本会真正生效）。 */
     private double volumePref = 60;
     private double brightnessPref = 100;
+
+    // ==================== 游戏牌桌运行时上下文（每次进入桌台时重建） ====================
+    /** 当前所选游戏（在进入模式选择页时记录，供"本地人机"按钮判断启动哪种桌台）。 */
+    private enum SelectedGame { PDK, LIAR }
+    private SelectedGame selectedGame = SelectedGame.PDK;
+
+    private PdkEngine pdkEngine;
+    private LiarEngine liarEngine;
+    private RuleBotController pdkBot2, pdkBot3;
+    private RuleBotController[] liarBots;
+    /** 本地桌当前选中的牌（点击手牌 toggle）。 */
+    private final Set<com.csu.pokergame.core.card.Card> tableSelected = new HashSet<>();
+    /** bot 回合延迟计时器，用于在重刷前取消上一个等待。 */
+    private PauseTransition botDelay;
+    /** 跑得快桌 UI 节点。 */
+    private HBox pdkHandBox, pdkCenterBox;
+    private Label pdkStatus;
+    private ListView<String> pdkLog;
+    private Button pdkPlayBtn, pdkPassBtn;
+    /** 骗子酒馆桌 UI 节点。 */
+    private HBox liarHandBox, liarOppStrip;
+    private Label liarStatus, liarTarget, liarPhase, liarResolution;
+    private ListView<String> liarLog;
+    private Button liarDeclareBtn, liarTrustBtn, liarChallengeBtn;
+    /** 联机运行时。 */
+    private LanHost lanHost;
+    private LanClient lanClient;
+    private PlayerId lanLocalSeat = PlayerId.SEAT_1;
+    private GameSnapshot lanLastSnapshot;
+    /** 本局结算动画是否已展示（避免结算遮罩被重复添加；每次新建桌台时重置为 false）。 */
+    private boolean resultShown = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -135,7 +211,9 @@ public class DeckApp extends Application {
         grid = new FlowPane();
         Scene deckScene = buildDeckScene(stage);
         homeScene = buildMenuScene(stage, deckScene);
+        loadingScene = buildLoadingScene(stage);
         gameChoiceScene = buildGameChoiceScene(stage);
+        profileScene = buildProfileScene(stage);
         modeChoiceScene = buildModeChoiceScene(stage);
         stage.setTitle("扑克牌小游戏");
         stage.setScene(homeScene);
@@ -299,8 +377,8 @@ public class DeckApp extends Application {
         start.getStyleClass().addAll("menu-btn", "menu-btn-start");
         start.setTooltip(new Tooltip("挑选一款游戏开始对局"));
         start.setOnAction(e -> {
-            if (gameChoiceScene != null) {
-                stage.setScene(gameChoiceScene);
+            if (loadingScene != null) {
+                stage.setScene(loadingScene);
             }
         });
 
@@ -671,6 +749,25 @@ public class DeckApp extends Application {
         }
     }
 
+    /** 页面内容错峰淡入并轻微上浮：切换到新页面后自然入场，避免硬切后内容瞬间弹出。 */
+    private static void playRiseIn(javafx.scene.Node... nodes) {
+        double delay = 0;
+        for (javafx.scene.Node n : nodes) {
+            n.setOpacity(0.0);
+            n.setTranslateY(16);
+            Timeline tl = new Timeline(
+                    new KeyFrame(Duration.ZERO,
+                            new KeyValue(n.opacityProperty(), 0.0),
+                            new KeyValue(n.translateYProperty(), 16, Interpolator.EASE_OUT)),
+                    new KeyFrame(Duration.millis(460),
+                            new KeyValue(n.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                            new KeyValue(n.translateYProperty(), 0, Interpolator.EASE_OUT)));
+            tl.setDelay(Duration.millis(delay));
+            tl.play();
+            delay += 110;
+        }
+    }
+
     /** 构建主页“游戏规则”弹窗卡片：页签切换跑得快 / 骗子酒馆，正文可滚动。 */
     private static VBox buildRulesModalCard(StackPane overlay) {
         VBox card = new VBox(12);
@@ -736,6 +833,134 @@ public class DeckApp extends Application {
 
     // ============================================================= 游戏选择界面
 
+    /**
+     * 构建加载动画页：点“开始游戏”后短暂展示，再进入“选择游戏”页。
+     * 动画 = 三点错峰波浪跳动 + 金色进度条从左填满到右（确定式）+ “正在进入牌桌”文案，
+     * 节奏为：卡片淡入 → 进度条满格 → 短暂停留 → 淡出切场（约 1.65 秒）；
+     * 切到“选择游戏”页后由该页内容错峰淡入承接，避免硬切后内容瞬间弹出。
+     */
+    private Scene buildLoadingScene(Stage stage) {
+        StackPane root = new StackPane();
+
+        // 背景：与其它页一致的国风山水层
+        root.getChildren().add(sceneBackgroundImage("/bg_menu.png"));
+
+        // 中央加载卡片：玻璃质感深色圆角面板
+        StackPane card = new StackPane();
+        card.getStyleClass().add("loading-card");
+        card.setMouseTransparent(true);
+
+        // 跳动的三个金点
+        HBox dots = new HBox(14);
+        dots.setAlignment(Pos.CENTER);
+        dots.setMouseTransparent(true);
+        List<Label> dotList = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            Label d = new Label("●");
+            d.setFont(Font.font("Segoe UI Symbol", FontWeight.BOLD, 18));
+            d.setTextFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                    new Stop(0, Color.web("#fff3c4")),
+                    new Stop(0.55, Color.web("#e8c25e")),
+                    new Stop(1, Color.web("#b07f1e"))));
+            d.setMouseTransparent(true);
+            dotList.add(d);
+            dots.getChildren().add(d);
+        }
+
+        // 进度条容器：固定宽高，确定式填充（高亮条从左填满到右）
+        double barW = 280;
+        double barH = 8;
+        StackPane barTrack = new StackPane();
+        barTrack.setPrefSize(barW, barH);
+        barTrack.setMaxSize(barW, barH);
+        barTrack.setMinSize(barW, barH);
+        barTrack.getStyleClass().add("loading-bar-track");
+        barTrack.setMouseTransparent(true);
+        // 圆角裁剪：填充条与光晕只在轨道内显示，不溢出两端
+        Rectangle barClip = new Rectangle(barW, barH);
+        barClip.setArcWidth(9);
+        barClip.setArcHeight(9);
+        barTrack.setClip(barClip);
+        Region barFill = new Region();
+        barFill.getStyleClass().add("loading-bar-fill");
+        barFill.setMouseTransparent(true);
+        barFill.setMinHeight(6);
+        barFill.setPrefHeight(6);
+        barFill.setMaxHeight(6);
+        // 宽度由入场动画 0 -> barW 驱动，呈“加载到满格”的确定式进度
+        barFill.setMinWidth(0);
+        barFill.setPrefWidth(barW);
+        barFill.setMaxWidth(0);
+        StackPane.setAlignment(barFill, Pos.CENTER_LEFT);
+        barTrack.getChildren().add(barFill);
+
+        Label tip = new Label("正在进入牌桌");
+        tip.getStyleClass().add("loading-tip");
+        tip.setMouseTransparent(true);
+
+        VBox box = new VBox(22, dots, barTrack, tip);
+        box.setAlignment(Pos.CENTER);
+        card.getChildren().add(box);
+
+        StackPane.setAlignment(card, Pos.CENTER);
+        root.getChildren().add(card);
+
+        Scene scene = new Scene(root);
+        var css = getClass().getResource("/app.css");
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
+
+        // 三点跳动：合并到单条时间轴，统一 540ms 周期、峰值间隔 180ms，
+        // 形成稳定连续的波浪节奏（原来三条独立时间轴周期不同，相位会漂移、节奏忽快忽慢）
+        Timeline dotsTl = new Timeline();
+        double wavePeriod = 540;
+        for (int i = 0; i < dotList.size(); i++) {
+            Label d = dotList.get(i);
+            double base = i * 180;
+            dotsTl.getKeyFrames().addAll(
+                    new KeyFrame(Duration.millis(base), new KeyValue(d.translateYProperty(), 0, Interpolator.EASE_BOTH)),
+                    new KeyFrame(Duration.millis(base + 90), new KeyValue(d.translateYProperty(), -8, Interpolator.EASE_BOTH)),
+                    new KeyFrame(Duration.millis(base + 180), new KeyValue(d.translateYProperty(), 0, Interpolator.EASE_BOTH)));
+        }
+        // 末尾锚点：把周期拉齐到 wavePeriod，末点回落处即下一循环起点，首尾无缝
+        dotsTl.getKeyFrames().add(new KeyFrame(Duration.millis(wavePeriod),
+                new KeyValue(dotList.get(dotList.size() - 1).translateYProperty(), 0)));
+        dotsTl.setCycleCount(Timeline.INDEFINITE);
+        dotsTl.play();
+
+        // 主动画：卡片淡入 → 进度条填满（确定式）→ 满格短暂停留 → 淡出切场，约 1.65s
+        card.setOpacity(0.0);
+        Timeline intro = new Timeline(
+                new KeyFrame(Duration.ZERO, new KeyValue(card.opacityProperty(), 0.0)),
+                new KeyFrame(Duration.millis(300), new KeyValue(card.opacityProperty(), 1.0, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(350), new KeyValue(barFill.maxWidthProperty(), 0, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(1150), new KeyValue(barFill.maxWidthProperty(), barW, Interpolator.EASE_BOTH)),
+                new KeyFrame(Duration.millis(1300), new KeyValue(card.opacityProperty(), 1.0)),
+                new KeyFrame(Duration.millis(1650), new KeyValue(card.opacityProperty(), 0.0, Interpolator.EASE_IN)));
+        intro.setOnFinished(e -> {
+            dotsTl.stop();
+            if (gameChoiceScene != null) {
+                stage.setScene(gameChoiceScene);
+            }
+        });
+
+        // 仅在本页显示时启动动画，切走后停止；再次进入时复位并从头播放
+        stage.sceneProperty().addListener((o, oldS, newS) -> {
+            if (newS == scene) {
+                card.setOpacity(0.0);
+                barFill.setMaxWidth(0);
+                for (Label d : dotList) d.setTranslateY(0);
+                dotsTl.playFromStart();
+                intro.playFromStart();
+            } else if (oldS == scene) {
+                intro.stop();
+                dotsTl.stop();
+            }
+        });
+        return scene;
+    }
+
     /** 构建“选择游戏”页：提供湖南跑得快 / 骗子酒馆两种玩法入口。 */
     private Scene buildGameChoiceScene(Stage stage) {
         StackPane root = new StackPane();
@@ -759,10 +984,10 @@ public class DeckApp extends Application {
 
         Button runFast = gameOption("♠", "湖南跑得快",
                 "三人 16 张经典玩法\n先出完手牌者获胜",
-                "扑克 · 竞速出牌", true, () -> enterModeChoice(stage, "♠ 湖南跑得快"));
+                "扑克 · 竞速出牌", true, () -> enterModeChoice(stage, "♠ 湖南跑得快", SelectedGame.PDK));
         Button liarBar = gameOption("🃏", "骗子酒馆",
                 "扑克与骰子模式\n谎言与质疑并存，活到最后即胜",
-                "聚会 · 心理博弈", false, () -> enterModeChoice(stage, "🃏 骗子酒馆"));
+                "聚会 · 心理博弈", false, () -> enterModeChoice(stage, "🃏 骗子酒馆", SelectedGame.LIAR));
 
         HBox options = new HBox(28, runFast, liarBar);
         options.setAlignment(Pos.CENTER);
@@ -771,32 +996,29 @@ public class DeckApp extends Application {
         HBox.setHgrow(runFast, Priority.ALWAYS);
         HBox.setHgrow(liarBar, Priority.ALWAYS);
 
-        Button back = new Button("← 返回主页");
+        Button back = new Button("返回主页 →");
         back.getStyleClass().add("game-back");
         back.setOnAction(e -> {
             if (homeScene != null) {
                 stage.setScene(homeScene);
             }
         });
-        StackPane.setAlignment(back, Pos.TOP_LEFT);
-        StackPane.setMargin(back, new Insets(22, 0, 0, 24));
+        StackPane.setAlignment(back, Pos.TOP_RIGHT);
+        StackPane.setMargin(back, new Insets(22, 24, 0, 0));
 
-        // 右上角玩家头像 + 昵称卡片：与左上角“返回”按钮对称呼应页内金属圆徽风格
+        // 左上角玩家头像 + 昵称卡片：与右上角“返回”按钮对称呼应页内金属圆徽风格
         StackPane avatar = new StackPane();
         avatar.getStyleClass().add("user-avatar");
-        Text avatarGlyph = new Text("♛");
-        avatarGlyph.setFont(Font.font("Segoe UI Symbol", FontWeight.BOLD, 24));
-        avatarGlyph.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+        userAvatarText.setFont(Font.font("Segoe UI Symbol", FontWeight.BOLD, 24));
+        userAvatarText.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
                 new Stop(0, Color.web("#fff3c4")),
                 new Stop(0.55, Color.web("#e8c25e")),
                 new Stop(1, Color.web("#b07f1e"))));
-        avatar.getChildren().add(avatarGlyph);
+        avatar.getChildren().add(userAvatarText);
 
-        Label nick = new Label("玩家");
-        nick.getStyleClass().add("user-nick");
-        Label stat = new Label("在线 · 准备开局");
-        stat.getStyleClass().add("user-stat");
-        VBox textBox = new VBox(2, nick, stat);
+        userNickLabel.getStyleClass().add("user-nick");
+        userStatLabel.getStyleClass().add("user-stat");
+        VBox textBox = new VBox(2, userNickLabel, userStatLabel);
         textBox.setAlignment(Pos.CENTER_LEFT);
 
         HBox userCard = new HBox(12, avatar, textBox);
@@ -805,8 +1027,17 @@ public class DeckApp extends Application {
         // 让 HBox 按内容计算尺寸，否则默认会撑满 StackPane，
         // .user-card 的半透明深绿背景就会铺满整个屏幕，造成“亮度下降”
         userCard.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        StackPane.setAlignment(userCard, Pos.TOP_RIGHT);
-        StackPane.setMargin(userCard, new Insets(22, 24, 0, 0));
+        StackPane.setAlignment(userCard, Pos.TOP_LEFT);
+        StackPane.setMargin(userCard, new Insets(22, 0, 0, 24));
+        // 点击头像/昵称卡片进入个人信息编辑页
+        userCard.setPickOnBounds(true);
+        userCard.setCursor(javafx.scene.Cursor.HAND);
+        userCard.setOnMouseClicked(e -> {
+            if (profileScene != null) {
+                stage.setScene(profileScene);
+            }
+        });
+        refreshUserCard();
 
         VBox center = new VBox(34, title, sub, options);
         center.setAlignment(Pos.CENTER);
@@ -819,10 +1050,13 @@ public class DeckApp extends Application {
         if (css != null) {
             scene.getStylesheets().add(css.toExternalForm());
         }
-        // 粒子动画仅在本页显示时运行，切走后暂停以节省资源
+        // 粒子动画仅在本页显示时运行，切走后暂停以节省资源；
+        // 进入本页时让头像/返回/标题/卡片错峰淡入上浮，承接加载页淡出，避免内容瞬间弹出
+        final javafx.scene.Node[] choiceIntro = { userCard, back, title, sub, options };
         stage.sceneProperty().addListener((o, oldS, newS) -> {
             if (newS == scene) {
                 particles.play();
+                playRiseIn(choiceIntro);
             } else if (oldS == scene) {
                 particles.stop();
             }
@@ -980,7 +1214,8 @@ public class DeckApp extends Application {
     // ============================================================= 玩法模式选择界面
 
     /** 从“选择游戏”进入“玩法模式”页，并把顶部徽标更新为所选游戏。 */
-    private void enterModeChoice(Stage stage, String game) {
+    private void enterModeChoice(Stage stage, String game, SelectedGame which) {
+        this.selectedGame = which;
         modeBadge.setText(game);
         if (modeChoiceScene != null) {
             stage.setScene(modeChoiceScene);
@@ -1011,12 +1246,18 @@ public class DeckApp extends Application {
 
         Button vsCpu = gameOption("🤖", "本地人机",
                 "与电脑 AI 同台对战\n无需联网，随时开局",
-                "单人 · 离线", false, () -> showInfo(stage,
-                        "本地人机模式正在开发中，敬请期待！"));
+                "单人 · 离线", false, () -> {
+                    if (botDelay != null) { botDelay.stop(); botDelay = null; }
+                    tableSelected.clear();
+                    if (selectedGame == SelectedGame.PDK) {
+                        stage.setScene(buildPdkTableScene(stage));
+                    } else {
+                        stage.setScene(buildLiarTableScene(stage));
+                    }
+                });
         Button lanPlay = gameOption("🌐", "局域网联机",
-                "创建或加入局域网房间\n与身边好友同场竞技",
-                "多人 · 联机", false, () -> showInfo(stage,
-                        "局域网联机模式正在开发中，敬请期待！"));
+                "创建或加入局域网房间\n与身边好友同台竞技",
+                "多人 · 联机", false, () -> stage.setScene(buildLanLobbyScene(stage)));
 
         HBox options = new HBox(28, vsCpu, lanPlay);
         options.setAlignment(Pos.CENTER);
@@ -1046,6 +1287,1160 @@ public class DeckApp extends Application {
             scene.getStylesheets().add(css.toExternalForm());
         }
         // 粒子动画仅在本页显示时运行，切走后暂停以节省资源
+        stage.sceneProperty().addListener((o, oldS, newS) -> {
+            if (newS == scene) {
+                particles.play();
+            } else if (oldS == scene) {
+                particles.stop();
+            }
+        });
+        return scene;
+    }
+
+    // ============================================================= 游戏牌桌（本地人机 + 局域网联机）
+
+    /** 把牌桌主体包成 P4 国风场景：山水背景 + 粒子 + 四角花色水印 + 返回按钮，挂 app.css。 */
+    private Scene wrapTableScene(Stage stage, javafx.scene.layout.Pane table, String backLabel) {
+        StackPane root = new StackPane();
+        root.getChildren().add(sceneBackgroundImage("/bg_menu.png"));
+        ParticleField particles = new ParticleField();
+        root.getChildren().add(particles);
+        addCornerSuit(root, "♠", Color.rgb(255, 255, 255, 0.05), Pos.TOP_LEFT, true);
+        addCornerSuit(root, "♥", Color.rgb(255, 170, 160, 0.05), Pos.TOP_RIGHT, true);
+        addCornerSuit(root, "♣", Color.rgb(255, 255, 255, 0.05), Pos.BOTTOM_LEFT, true);
+        addCornerSuit(root, "♦", Color.rgb(255, 170, 160, 0.05), Pos.BOTTOM_RIGHT, true);
+
+        StackPane.setAlignment(table, Pos.CENTER);
+        StackPane.setMargin(table, new Insets(28));
+        root.getChildren().add(table);
+
+        Button back = new Button(backLabel);
+        back.getStyleClass().add("game-back");
+        back.setOnAction(e -> {
+            if (botDelay != null) { botDelay.stop(); botDelay = null; }
+            shutdownLan();
+            stage.setScene(modeChoiceScene);
+        });
+        StackPane.setAlignment(back, Pos.TOP_LEFT);
+        StackPane.setMargin(back, new Insets(22, 0, 0, 24));
+        root.getChildren().add(back);
+
+        Scene scene = new Scene(root);
+        var css = getClass().getResource("/app.css");
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
+        stage.sceneProperty().addListener((o, oldS, newS) -> {
+            if (newS == scene) {
+                particles.play();
+            } else if (oldS == scene) {
+                particles.stop();
+            }
+        });
+        return scene;
+    }
+
+    /**
+     * 对局结束统一结算入口：在当前牌桌上覆盖一层结算遮罩，按胜/负播放不同主题的退场动画。
+     * 节奏：遮罩淡入 → 结算卡片弹入（缩放+上浮，徽标轻微回弹）→ “重新开始 / 返回选择游戏”按钮淡入；
+     * 胜利时标题带轻微呼吸光感，失败时保持沉稳。按钮在入场动画结束后才可点击。
+     *
+     * @param onRestart “重新开始”动作（由调用方传入重建对应桌台的逻辑）
+     */
+    private void showGameResult(Stage stage, boolean win, String subtitle, Runnable onRestart) {
+        if (resultShown) return;
+        resultShown = true;
+        StackPane root = (StackPane) stage.getScene().getRoot();
+
+        StackPane overlay = new StackPane();
+        overlay.getStyleClass().add("result-overlay");
+        overlay.setOpacity(0.0);
+
+        Region shade = new Region();
+        shade.getStyleClass().add("result-shade");
+
+        VBox card = new VBox(16);
+        card.getStyleClass().addAll("result-card", win ? "result-win" : "result-lose");
+        card.setAlignment(Pos.CENTER);
+        card.setOpacity(0.0);
+        card.setScaleX(0.85);
+        card.setScaleY(0.85);
+        card.setTranslateY(24);
+
+        Text glyph = new Text(win ? "★" : "✕");
+        glyph.getStyleClass().add("result-glyph");
+        glyph.setOpacity(0.0);
+        glyph.setScaleX(0.4);
+        glyph.setScaleY(0.4);
+
+        Label title = new Label(win ? "胜利" : "失败");
+        title.getStyleClass().add("result-title");
+        Label sub = new Label(subtitle);
+        sub.getStyleClass().add("result-subtitle");
+        sub.setWrapText(true);
+        sub.setTextAlignment(TextAlignment.CENTER);
+        sub.setMaxWidth(420);
+
+        Button restart = new Button("重新开始");
+        restart.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
+        restart.setDisable(true);
+        Button back = new Button("返回选择游戏");
+        back.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-back");
+        back.setDisable(true);
+        HBox btnRow = new HBox(22, restart, back);
+        btnRow.setAlignment(Pos.CENTER);
+        btnRow.setOpacity(0.0);
+        btnRow.setTranslateY(10);
+        VBox.setMargin(btnRow, new Insets(24, 0, 0, 0));
+
+        card.getChildren().addAll(glyph, title, sub, btnRow);
+        overlay.getChildren().addAll(shade, card);
+        root.getChildren().add(overlay);
+
+        Timeline in = new Timeline(
+                // 遮罩淡入
+                new KeyFrame(Duration.ZERO, new KeyValue(overlay.opacityProperty(), 0.0)),
+                new KeyFrame(Duration.millis(320), new KeyValue(overlay.opacityProperty(), 1.0, Interpolator.EASE_OUT)),
+                // 卡片弹入：缩小上浮 → 归位
+                new KeyFrame(Duration.millis(140),
+                        new KeyValue(card.opacityProperty(), 0.0),
+                        new KeyValue(card.scaleXProperty(), 0.85, Interpolator.EASE_OUT),
+                        new KeyValue(card.scaleYProperty(), 0.85, Interpolator.EASE_OUT),
+                        new KeyValue(card.translateYProperty(), 24, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(640),
+                        new KeyValue(card.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(card.scaleXProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(card.scaleYProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(card.translateYProperty(), 0, Interpolator.EASE_OUT)),
+                // 徽标：放大后轻微回弹，落点自然
+                new KeyFrame(Duration.millis(360),
+                        new KeyValue(glyph.opacityProperty(), 0.0),
+                        new KeyValue(glyph.scaleXProperty(), 0.4, Interpolator.EASE_OUT),
+                        new KeyValue(glyph.scaleYProperty(), 0.4, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(560),
+                        new KeyValue(glyph.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(glyph.scaleXProperty(), 1.12, Interpolator.EASE_OUT),
+                        new KeyValue(glyph.scaleYProperty(), 1.12, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(740),
+                        new KeyValue(glyph.scaleXProperty(), 1.0, Interpolator.EASE_BOTH),
+                        new KeyValue(glyph.scaleYProperty(), 1.0, Interpolator.EASE_BOTH)),
+                // 按钮最后淡入
+                new KeyFrame(Duration.millis(720),
+                        new KeyValue(btnRow.opacityProperty(), 0.0),
+                        new KeyValue(btnRow.translateYProperty(), 10, Interpolator.EASE_OUT)),
+                new KeyFrame(Duration.millis(980),
+                        new KeyValue(btnRow.opacityProperty(), 1.0, Interpolator.EASE_OUT),
+                        new KeyValue(btnRow.translateYProperty(), 0, Interpolator.EASE_OUT)));
+        in.setOnFinished(e -> {
+            restart.setDisable(false);
+            back.setDisable(false);
+            if (win) {
+                // 胜利标题轻微呼吸（幅度克制，自然不突兀）
+                Timeline pulse = new Timeline(
+                        new KeyFrame(Duration.ZERO,
+                                new KeyValue(title.scaleXProperty(), 1.0, Interpolator.EASE_BOTH),
+                                new KeyValue(title.scaleYProperty(), 1.0, Interpolator.EASE_BOTH)),
+                        new KeyFrame(Duration.millis(1100),
+                                new KeyValue(title.scaleXProperty(), 1.045, Interpolator.EASE_BOTH),
+                                new KeyValue(title.scaleYProperty(), 1.045, Interpolator.EASE_BOTH)));
+                pulse.setAutoReverse(true);
+                pulse.setCycleCount(Timeline.INDEFINITE);
+                pulse.play();
+            }
+        });
+        in.play();
+
+        restart.setOnAction(e -> {
+            if (botDelay != null) { botDelay.stop(); botDelay = null; }
+            onRestart.run();
+        });
+        back.setOnAction(e -> {
+            if (botDelay != null) { botDelay.stop(); botDelay = null; }
+            stage.setScene(gameChoiceScene);
+        });
+    }
+
+    // ----------------------------- 跑得快（本地人机） -----------------------------
+
+    /** 构建跑得快牌桌：SEAT_1 为玩家，SEAT_2/3 为 AI。 */
+    private Scene buildPdkTableScene(Stage stage) {
+        resultShown = false;
+        tableSelected.clear();
+        pdkEngine = new PdkEngine(new Random(System.currentTimeMillis()));
+        pdkEngine.start();
+        pdkBot2 = new RuleBotController(new PdkBotPolicy());
+        pdkBot3 = new RuleBotController(new PdkBotPolicy());
+
+        BorderPane table = new BorderPane();
+        table.getStyleClass().add("table-root");
+        table.setPrefSize(960, 600);
+
+        pdkStatus = new Label();
+        pdkStatus.getStyleClass().add("table-status-bar");
+        pdkStatus.setMaxWidth(Double.MAX_VALUE);
+        pdkStatus.setAlignment(Pos.CENTER);
+        table.setTop(pdkStatus);
+
+        pdkCenterBox = new HBox(10);
+        pdkCenterBox.getStyleClass().add("table-center-row");
+        pdkCenterBox.setAlignment(Pos.CENTER);
+        pdkCenterBox.setMinHeight(120);
+        StackPane centerWrap = new StackPane(pdkCenterBox);
+        centerWrap.getStyleClass().add("table-center-wrap");
+        table.setCenter(centerWrap);
+
+        pdkHandBox = new HBox(6);
+        pdkHandBox.getStyleClass().add("table-hand-row");
+        pdkHandBox.setAlignment(Pos.CENTER);
+        pdkHandBox.setMinHeight(110);
+        pdkPlayBtn = new Button("出牌");
+        pdkPassBtn = new Button("不出");
+        for (Button b : List.of(pdkPlayBtn, pdkPassBtn)) {
+            b.getStyleClass().addAll("menu-btn", "table-action-btn");
+        }
+        pdkPlayBtn.setOnAction(e -> onPdkPlay(stage));
+        pdkPassBtn.setOnAction(e -> onPdkPass(stage));
+        HBox actions = new HBox(24, pdkPassBtn, pdkPlayBtn);
+        actions.setAlignment(Pos.CENTER);
+        VBox bottom = new VBox(14, pdkHandBox, actions);
+        bottom.setAlignment(Pos.CENTER);
+        bottom.setPadding(new Insets(10));
+        table.setBottom(bottom);
+
+        pdkLog = new ListView<>();
+        pdkLog.getStyleClass().add("table-log");
+        pdkLog.setPrefWidth(220);
+        pdkLog.setMaxHeight(Double.MAX_VALUE);
+        table.setRight(pdkLog);
+
+        Scene scene = wrapTableScene(stage, table, "← 返回模式选择");
+        refreshPdkTable(stage);
+        return scene;
+    }
+
+    /** 刷新跑得快桌：手牌 / 桌面 / 状态 / 日志 / 按钮启用 / bot 调度。 */
+    private void refreshPdkTable(Stage stage) {
+        PdkSnapshot snap = (PdkSnapshot) pdkEngine.snapshotFor(PlayerId.SEAT_1);
+
+        // 手牌：按点数排序，点击 toggle 选中（上浮表示）
+        pdkHandBox.getChildren().clear();
+        List<com.csu.pokergame.core.card.Card> hand = snap.myHand().stream()
+                .sorted(java.util.Comparator.comparingInt(c -> c.rank().comparisonValue()))
+                .toList();
+        boolean myTurn = snap.currentPlayer() == PlayerId.SEAT_1
+                && snap.phase() == GamePhase.PLAYING && snap.winner().isEmpty();
+        for (var card : hand) {
+            ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+            iv.setFitWidth(64);
+            iv.setFitHeight(90);
+            iv.getStyleClass().add("table-card-img");
+            if (tableSelected.contains(card)) {
+                iv.setTranslateY(-16);
+            }
+            iv.setOnMouseClicked(e -> {
+                if (!myTurn) return;
+                if (tableSelected.contains(card)) {
+                    tableSelected.remove(card);
+                    iv.setTranslateY(0);
+                } else {
+                    tableSelected.add(card);
+                    iv.setTranslateY(-16);
+                }
+                updatePdkButtons(snap);
+            });
+            pdkHandBox.getChildren().add(iv);
+        }
+
+        // 桌面：上一手出的牌
+        pdkCenterBox.getChildren().clear();
+        snap.lastMove().ifPresent(move -> {
+            for (var card : move.cards()) {
+                ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+                iv.setFitWidth(56);
+                iv.setFitHeight(78);
+                iv.setMouseTransparent(true);
+                pdkCenterBox.getChildren().add(iv);
+            }
+        });
+        if (pdkCenterBox.getChildren().isEmpty()) {
+            Label empty = new Label("（桌面为空，自由出牌）");
+            empty.getStyleClass().add("table-hint");
+            pdkCenterBox.getChildren().add(empty);
+        }
+
+        // 状态栏
+        StringBuilder sb = new StringBuilder();
+        sb.append("当前: ").append(seatName(snap.currentPlayer()));
+        snap.remainingCardCounts().forEach((p, n) ->
+                sb.append("   ").append(seatName(p)).append(" 剩 ").append(n));
+        snap.closedDoorPlayers().forEach(p -> sb.append("  ·").append(seatName(p)).append("关门"));
+        if (snap.faceUpCard().isPresent()) {
+            sb.append("   明牌 ").append(snap.faceUpCard().get().display());
+        }
+        pdkStatus.setText(sb.toString());
+
+        // 日志
+        pdkLog.getItems().setAll(snap.publicEvents().stream()
+                .skip(Math.max(0, snap.publicEvents().size() - 40))
+                .toList());
+
+        updatePdkButtons(snap);
+
+        // 胜负：播放胜利/失败退场动画，动画结束后提供“重新开始 / 返回选择游戏”
+        if (snap.winner().isPresent()) {
+            boolean win = snap.winner().get() == PlayerId.SEAT_1;
+            if (botDelay != null) { botDelay.stop(); botDelay = null; }
+            String sub = win
+                    ? "你率先出完手牌，本局获胜！"
+                    : seatName(snap.winner().get()) + " 先出完手牌，本局惜败。";
+            showGameResult(stage, win, sub, () -> stage.setScene(buildPdkTableScene(stage)));
+            return;
+        }
+
+        // bot 回合调度
+        schedulePdkBot(stage);
+    }
+
+    private void updatePdkButtons(PdkSnapshot snap) {
+        boolean myTurn = snap.currentPlayer() == PlayerId.SEAT_1
+                && snap.phase() == GamePhase.PLAYING && snap.winner().isEmpty();
+        if (!myTurn) {
+            pdkPlayBtn.setDisable(true);
+            pdkPassBtn.setDisable(true);
+            return;
+        }
+        // 出牌：选中牌构成一个合法的 PlayPdkCards
+        boolean canPlay = !tableSelected.isEmpty()
+                && pdkEngine.legalCommands(PlayerId.SEAT_1).stream()
+                        .anyMatch(c -> c instanceof PlayPdkCards p
+                                && new HashSet<>(p.cards()).containsAll(tableSelected)
+                                && tableSelected.containsAll(p.cards()));
+        pdkPlayBtn.setDisable(!canPlay);
+        // 不出：合法命令含 PassPdkTurn（能压时不可不出）
+        pdkPassBtn.setDisable(pdkEngine.legalCommands(PlayerId.SEAT_1).stream()
+                .noneMatch(c -> c instanceof PassPdkTurn));
+    }
+
+    private void onPdkPlay(Stage stage) {
+        if (tableSelected.isEmpty()) {
+            showInfo(stage, "请先选择要出的牌");
+            return;
+        }
+        PlayPdkCards cmd = new PlayPdkCards(List.copyOf(tableSelected));
+        try {
+            pdkEngine.apply(cmd);
+        } catch (IllegalArgumentException ex) {
+            showInfo(stage, "出牌不合法：" + ex.getMessage());
+            return;
+        }
+        tableSelected.clear();
+        refreshPdkTable(stage);
+    }
+
+    private void onPdkPass(Stage stage) {
+        try {
+            pdkEngine.apply(new PassPdkTurn());
+        } catch (IllegalArgumentException ex) {
+            showInfo(stage, "不能不出：" + ex.getMessage());
+            return;
+        }
+        refreshPdkTable(stage);
+    }
+
+    /** 若当前是 bot 回合，延迟后让 bot 决策并 apply，再刷新（链式推进）。 */
+    private void schedulePdkBot(Stage stage) {
+        PdkSnapshot snap = (PdkSnapshot) pdkEngine.snapshotFor(PlayerId.SEAT_1);
+        if (snap.phase() != GamePhase.PLAYING || snap.winner().isPresent()) return;
+        PlayerId cur = snap.currentPlayer();
+        if (cur == PlayerId.SEAT_1) return;
+        RuleBotController bot = cur == PlayerId.SEAT_2 ? pdkBot2 : pdkBot3;
+        if (botDelay != null) botDelay.stop();
+        botDelay = new PauseTransition(Duration.millis(700));
+        botDelay.setOnFinished(e -> {
+            try {
+                GameSnapshot botSnap = pdkEngine.snapshotFor(cur);
+                var legal = pdkEngine.legalCommands(cur);
+                if (legal.isEmpty()) {
+                    refreshPdkTable(stage);
+                    return;
+                }
+                BotDecision d = bot.decide(botSnap, legal);
+                pdkEngine.apply(d.command());
+            } catch (IllegalArgumentException ignored) {
+                // 容错：bot 决策偶尔不合法时直接刷新，避免卡死
+            }
+            refreshPdkTable(stage);
+        });
+        botDelay.play();
+    }
+
+    // ----------------------------- 骗子酒馆（本地人机） -----------------------------
+
+    /** 构建骗子酒馆牌桌：SEAT_1 为玩家，SEAT_2/3/4 为不同随机策略 AI。 */
+    private Scene buildLiarTableScene(Stage stage) {
+        resultShown = false;
+        tableSelected.clear();
+        liarEngine = new LiarEngine(new Random(System.currentTimeMillis()));
+        liarEngine.start();
+        liarBots = new RuleBotController[3];
+        for (int i = 0; i < 3; i++) {
+            liarBots[i] = new RuleBotController(new LiarRandomPolicy(new Random(System.currentTimeMillis() + i)));
+        }
+
+        BorderPane table = new BorderPane();
+        table.getStyleClass().add("table-root");
+        table.setPrefSize(960, 600);
+
+        // 顶部：目标点数 + 阶段 + 上轮结算
+        liarTarget = new Label();
+        liarTarget.getStyleClass().add("table-liar-target");
+        liarPhase = new Label();
+        liarPhase.getStyleClass().add("table-liar-phase");
+        HBox topBar = new HBox(30, liarTarget, liarPhase);
+        topBar.setAlignment(Pos.CENTER);
+        topBar.getStyleClass().add("table-status-bar");
+        table.setTop(topBar);
+
+        // 中部：四家存活 + 手枪仓
+        liarOppStrip = new HBox(24);
+        liarOppStrip.getStyleClass().add("table-opponent-strip");
+        liarOppStrip.setAlignment(Pos.CENTER);
+        liarResolution = new Label();
+        liarResolution.getStyleClass().add("table-hint");
+        liarResolution.setWrapText(true);
+        liarResolution.setMaxWidth(640);
+        liarResolution.setAlignment(Pos.CENTER);
+        VBox center = new VBox(16, liarOppStrip, liarResolution);
+        center.setAlignment(Pos.CENTER);
+        table.setCenter(center);
+
+        // 底部：手牌 + 三个动作按钮
+        liarHandBox = new HBox(8);
+        liarHandBox.getStyleClass().add("table-hand-row");
+        liarHandBox.setAlignment(Pos.CENTER);
+        liarHandBox.setMinHeight(110);
+        liarDeclareBtn = new Button("宣告");
+        liarTrustBtn = new Button("相信");
+        liarChallengeBtn = new Button("质疑");
+        for (Button b : List.of(liarDeclareBtn, liarTrustBtn, liarChallengeBtn)) {
+            b.getStyleClass().addAll("menu-btn", "table-action-btn");
+        }
+        liarDeclareBtn.setOnAction(e -> onLiarDeclare(stage));
+        liarTrustBtn.setOnAction(e -> {
+            try { liarEngine.apply(new TrustDeclaration()); }
+            catch (IllegalArgumentException ex) { showInfo(stage, ex.getMessage()); return; }
+            tableSelected.clear();
+            refreshLiarTable(stage);
+        });
+        liarChallengeBtn.setOnAction(e -> {
+            try { liarEngine.apply(new ChallengeDeclaration()); }
+            catch (IllegalArgumentException ex) { showInfo(stage, ex.getMessage()); return; }
+            tableSelected.clear();
+            refreshLiarTable(stage);
+        });
+        HBox actions = new HBox(24, liarDeclareBtn, liarTrustBtn, liarChallengeBtn);
+        actions.setAlignment(Pos.CENTER);
+        VBox bottom = new VBox(14, liarHandBox, actions);
+        bottom.setAlignment(Pos.CENTER);
+        bottom.setPadding(new Insets(10));
+        table.setBottom(bottom);
+
+        liarLog = new ListView<>();
+        liarLog.getStyleClass().add("table-log");
+        liarLog.setPrefWidth(220);
+        table.setRight(liarLog);
+
+        Scene scene = wrapTableScene(stage, table, "← 返回模式选择");
+        refreshLiarTable(stage);
+        return scene;
+    }
+
+    /** 刷新骗子酒馆桌。 */
+    private void refreshLiarTable(Stage stage) {
+        LiarSnapshot snap = (LiarSnapshot) liarEngine.snapshotFor(PlayerId.SEAT_1);
+
+        // 目标点数 + 阶段
+        liarTarget.setText("目标点数：" + snap.targetRank().label());
+        liarPhase.setText("阶段：" + phaseName(snap.liarPhase()));
+
+        // 四家存活 + 手枪仓
+        liarOppStrip.getChildren().clear();
+        for (PlayerId p : List.of(PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4)) {
+            VBox seatBox = new VBox(6);
+            seatBox.setAlignment(Pos.CENTER);
+            Label name = new Label(seatName(p) + (snap.eliminatedPlayers().contains(p) ? " ✗" : ""));
+            name.getStyleClass().add("table-seat-name");
+            if (snap.eliminatedPlayers().contains(p)) name.getStyleClass().add("table-seat-dead");
+            HBox gun = new HBox(4);
+            gun.setAlignment(Pos.CENTER);
+            var gs = snap.guns().get(p);
+            int pulled = gs == null ? 0 : gs.shotsFired();
+            for (int i = 0; i < 6; i++) {
+                Label dot = new Label("●");
+                dot.setStyle(i < pulled
+                        ? "-fx-text-fill: rgba(255,80,80,0.85); -fx-font-size:14px;"
+                        : "-fx-text-fill: rgba(180,200,180,0.4); -fx-font-size:14px;");
+                gun.getChildren().add(dot);
+            }
+            Label info = new Label("已扣" + pulled + "/6");
+            info.getStyleClass().add("table-hint");
+            seatBox.getChildren().addAll(name, gun, info);
+            liarOppStrip.getChildren().add(seatBox);
+        }
+
+        // 上轮结算
+        liarResolution.setText(snap.lastResolution()
+                .map(r -> "上轮：" + r.toString())
+                .orElse(snap.declarer() == null ? "等待首位宣告者" : ""));
+
+        // 手牌：点击 toggle（最多 3 张）
+        liarHandBox.getChildren().clear();
+        boolean canDeclare = snap.liarPhase() == LiarPhase.DECLARE
+                && snap.currentPlayer() == PlayerId.SEAT_1
+                && snap.phase() == GamePhase.PLAYING;
+        for (var card : snap.myHand().stream()
+                .sorted(java.util.Comparator.comparingInt(c -> c.rank().comparisonValue()))
+                .toList()) {
+            ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+            iv.setFitWidth(64);
+            iv.setFitHeight(90);
+            iv.getStyleClass().add("table-card-img");
+            if (tableSelected.contains(card)) iv.setTranslateY(-16);
+            iv.setOnMouseClicked(e -> {
+                if (!canDeclare) return;
+                if (tableSelected.contains(card)) {
+                    tableSelected.remove(card);
+                    iv.setTranslateY(0);
+                } else if (tableSelected.size() < 3) {
+                    tableSelected.add(card);
+                    iv.setTranslateY(-16);
+                }
+                updateLiarButtons(snap);
+            });
+            liarHandBox.getChildren().add(iv);
+        }
+
+        // 日志
+        liarLog.getItems().setAll(snap.publicEvents().stream()
+                .skip(Math.max(0, snap.publicEvents().size() - 40))
+                .toList());
+
+        updateLiarButtons(snap);
+
+        // 本地中弹/终局：播放胜利/失败退场动画，结束后可重新开始或返回选择游戏
+        if (snap.winner().isPresent() || snap.eliminatedPlayers().contains(PlayerId.SEAT_1)) {
+            boolean win = snap.winner().isPresent() && snap.winner().get() == PlayerId.SEAT_1;
+            if (botDelay != null) { botDelay.stop(); botDelay = null; }
+            String sub = win
+                    ? "你活到了最后，赢得酒馆对决！"
+                    : "你中弹被淘汰，本局结束。";
+            showGameResult(stage, win, sub, () -> stage.setScene(buildLiarTableScene(stage)));
+            return;
+        }
+
+        scheduleLiarBot(stage);
+    }
+
+    private void updateLiarButtons(LiarSnapshot snap) {
+        boolean myTurn = snap.currentPlayer() == PlayerId.SEAT_1
+                && snap.phase() == GamePhase.PLAYING;
+        if (!myTurn) {
+            liarDeclareBtn.setDisable(true);
+            liarTrustBtn.setDisable(true);
+            liarChallengeBtn.setDisable(true);
+            return;
+        }
+        if (snap.liarPhase() == LiarPhase.DECLARE) {
+            boolean ok = !tableSelected.isEmpty() && tableSelected.size() <= 3
+                    && liarEngine.legalCommands(PlayerId.SEAT_1).stream()
+                            .anyMatch(c -> c instanceof DeclareLiarCards d
+                                    && new HashSet<>(d.cards()).containsAll(tableSelected)
+                                    && tableSelected.containsAll(d.cards()));
+            liarDeclareBtn.setDisable(!ok);
+            liarTrustBtn.setDisable(true);
+            liarChallengeBtn.setDisable(true);
+        } else if (snap.liarPhase() == LiarPhase.RESPOND) {
+            liarDeclareBtn.setDisable(true);
+            liarTrustBtn.setDisable(false);
+            liarChallengeBtn.setDisable(false);
+        } else {
+            liarDeclareBtn.setDisable(true);
+            liarTrustBtn.setDisable(true);
+            liarChallengeBtn.setDisable(true);
+        }
+    }
+
+    private void onLiarDeclare(Stage stage) {
+        if (tableSelected.isEmpty() || tableSelected.size() > 3) {
+            showInfo(stage, "请选择 1–3 张牌宣告");
+            return;
+        }
+        try {
+            liarEngine.apply(new DeclareLiarCards(List.copyOf(tableSelected)));
+        } catch (IllegalArgumentException ex) {
+            showInfo(stage, "宣告不合法：" + ex.getMessage());
+            return;
+        }
+        tableSelected.clear();
+        refreshLiarTable(stage);
+    }
+
+    /** 骗子酒馆 bot 调度。 */
+    private void scheduleLiarBot(Stage stage) {
+        LiarSnapshot snap = (LiarSnapshot) liarEngine.snapshotFor(PlayerId.SEAT_1);
+        if (snap.phase() != GamePhase.PLAYING || snap.winner().isPresent()) return;
+        PlayerId cur = snap.currentPlayer();
+        if (cur == PlayerId.SEAT_1) return;
+        int idx = cur == PlayerId.SEAT_2 ? 0 : cur == PlayerId.SEAT_3 ? 1 : 2;
+        RuleBotController bot = liarBots[idx];
+        if (botDelay != null) botDelay.stop();
+        botDelay = new PauseTransition(Duration.millis(900));
+        botDelay.setOnFinished(e -> {
+            try {
+                GameSnapshot botSnap = liarEngine.snapshotFor(cur);
+                var legal = liarEngine.legalCommands(cur);
+                if (legal.isEmpty()) {
+                    refreshLiarTable(stage);
+                    return;
+                }
+                BotDecision d = bot.decide(botSnap, legal);
+                liarEngine.apply(d.command());
+            } catch (IllegalArgumentException ignored) {
+            }
+            refreshLiarTable(stage);
+        });
+        botDelay.play();
+    }
+
+    // ----------------------------- 局域网联机 -----------------------------
+
+    /** 关闭联机主机/客户端，释放后台线程。 */
+    private void shutdownLan() {
+        if (lanHost != null) { lanHost.shutdown(); lanHost = null; }
+        if (lanClient != null) { lanClient.shutdown(); lanClient = null; }
+        lanLastSnapshot = null;
+    }
+
+    /** 构建联机大厅：创建或加入房间。 */
+    private Scene buildLanLobbyScene(Stage stage) {
+        shutdownLan();
+        StackPane root = new StackPane();
+        root.getChildren().add(sceneBackgroundImage("/bg_menu.png"));
+        ParticleField particles = new ParticleField();
+        root.getChildren().add(particles);
+        addCornerSuit(root, "♠", Color.rgb(255, 255, 255, 0.05), Pos.TOP_LEFT, true);
+        addCornerSuit(root, "♥", Color.rgb(255, 170, 160, 0.05), Pos.TOP_RIGHT, true);
+        addCornerSuit(root, "♣", Color.rgb(255, 255, 255, 0.05), Pos.BOTTOM_LEFT, true);
+        addCornerSuit(root, "♦", Color.rgb(255, 170, 160, 0.05), Pos.BOTTOM_RIGHT, true);
+
+        String gameName = selectedGame == SelectedGame.PDK ? "湖南跑得快" : "骗子酒馆";
+        Label title = new Label("局域网联机 · " + gameName);
+        title.getStyleClass().add("game-choice-title");
+        Label sub = new Label("创建房间成为主机，或输入主机 IP 加入");
+        sub.getStyleClass().add("game-choice-sub");
+
+        Button createBtn = new Button("创建房间");
+        createBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
+        TextField ipField = new TextField();
+        ipField.setPromptText("主机 IP，如 192.168.1.100");
+        ipField.getStyleClass().add("lan-ip-field");
+        ipField.setPrefWidth(220);
+        Button joinBtn = new Button("加入房间");
+        joinBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
+
+        Label ipDisplay = new Label();
+        ipDisplay.getStyleClass().add("game-choice-sub");
+
+        ListView<String> playerList = new ListView<>();
+        playerList.getStyleClass().add("table-log");
+        playerList.setPrefHeight(170);
+        playerList.setMaxWidth(420);
+
+        Button startBtn = new Button("开始游戏");
+        startBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
+        startBtn.setVisible(false);
+
+        GameType gt = selectedGame == SelectedGame.PDK ? GameType.PAO_DE_KUAI : GameType.LIARS_POKER;
+        int required = gt.requiredPlayers();
+
+        createBtn.setOnAction(e -> {
+            try {
+                lanHost = new LanHost(gt);
+                lanHost.setOnRoomUpdate(rm -> Platform.runLater(() -> updateLobbyRoom(rm, playerList, startBtn, required)));
+                lanHost.setOnStartGame(() -> Platform.runLater(() -> stage.setScene(buildLanTableSceneHost(stage, lanHost))));
+                lanHost.setOnEnded(reason -> Platform.runLater(() -> {
+                    showInfo(stage, "对局结束：" + reason);
+                    shutdownLan();
+                    stage.setScene(modeChoiceScene);
+                }));
+                ipDisplay.setText("本机 " + lanHost.localAddress() + ":" + lanHost.port() + "，等待 " + (required - 1) + " 人加入");
+                lanHost.broadcastRoom();
+                createBtn.setDisable(true);
+            } catch (IOException ex) {
+                showInfo(stage, "创建房间失败：" + ex.getMessage());
+            }
+        });
+
+        joinBtn.setOnAction(e -> {
+            String ip = ipField.getText().trim();
+            if (ip.isEmpty()) { showInfo(stage, "请输入主机 IP"); return; }
+            lanClient = new LanClient(ip);
+            lanClient.setOnRoomUpdate(rm -> Platform.runLater(() -> updateLobbyRoom(rm, playerList, startBtn, required)));
+            lanClient.setOnStartGame((gameType, seat) -> Platform.runLater(() -> {
+                lanLocalSeat = seat;
+                stage.setScene(buildLanTableSceneClient(stage, lanClient, gameType, seat));
+            }));
+            lanClient.setOnSnapshot(snap -> Platform.runLater(() -> {
+                lanLastSnapshot = snap;
+                applyLanSnapshot(stage, snap);
+            }));
+            lanClient.setOnEnded(reason -> Platform.runLater(() -> {
+                showInfo(stage, "对局结束：" + reason);
+                shutdownLan();
+                stage.setScene(modeChoiceScene);
+            }));
+            lanClient.setOnError(err -> Platform.runLater(() -> showInfo(stage, "错误：" + err)));
+            lanClient.join();
+            joinBtn.setDisable(true);
+            ipDisplay.setText("正在连接 " + ip + " …");
+        });
+
+        startBtn.setOnAction(e -> {
+            try { if (lanHost != null) lanHost.startGame(); }
+            catch (IllegalStateException ex) { showInfo(stage, ex.getMessage()); }
+        });
+
+        Button back = new Button("← 返回模式选择");
+        back.getStyleClass().add("game-back");
+        back.setOnAction(e -> { shutdownLan(); stage.setScene(modeChoiceScene); });
+        StackPane.setAlignment(back, Pos.TOP_LEFT);
+        StackPane.setMargin(back, new Insets(22, 0, 0, 24));
+
+        HBox row = new HBox(16, createBtn, ipField, joinBtn);
+        row.setAlignment(Pos.CENTER);
+        VBox center = new VBox(26, title, sub, row, ipDisplay, playerList, startBtn);
+        center.setAlignment(Pos.CENTER);
+        StackPane.setAlignment(center, Pos.CENTER);
+        root.getChildren().addAll(center, back);
+
+        Scene scene = new Scene(root);
+        var css = getClass().getResource("/app.css");
+        if (css != null) scene.getStylesheets().add(css.toExternalForm());
+        stage.sceneProperty().addListener((o, oldS, newS) -> {
+            if (newS == scene) particles.play();
+            else if (oldS == scene) particles.stop();
+        });
+        return scene;
+    }
+
+    private void updateLobbyRoom(RoomSnapshot rm, ListView<String> playerList, Button startBtn, int required) {
+        var items = rm.players().stream()
+                .map(p -> p.displayName() + (p.host() ? "（主机）" : "")
+                        + (p.connected() ? "  ●" : "  ○"))
+                .toList();
+        playerList.getItems().setAll(items);
+        boolean isHost = lanHost != null;
+        startBtn.setVisible(isHost);
+        startBtn.setDisable(!rm.full());
+        startBtn.setText(rm.full() ? "开始游戏" : "等待 (" + required + "人)");
+    }
+
+    /** 联机桌（主机视角）。 */
+    private Scene buildLanTableSceneHost(Stage stage, LanHost host) {
+        lanHost = host;
+        lanLocalSeat = PlayerId.SEAT_1;
+        // 收到远程客户端命令：切回 JavaFX 线程后由主机 apply
+        host.setOnCommand(pc -> Platform.runLater(() -> {
+            try { host.handleRemoteCommand(pc.seat(), pc.command()); }
+            catch (IllegalArgumentException ignored) { }
+            applyLanSnapshot(stage, host.localSnapshot());
+        }));
+        Scene scene = (selectedGame == SelectedGame.PDK)
+                ? buildPdkLanTableShell(stage, cmd -> host.submitLocalCommand(cmd), () -> host.localSnapshot())
+                : buildLiarLanTableShell(stage, cmd -> host.submitLocalCommand(cmd), () -> host.localSnapshot());
+        applyLanSnapshot(stage, host.localSnapshot());
+        return scene;
+    }
+
+    /** 联机桌（客户端视角）。 */
+    private Scene buildLanTableSceneClient(Stage stage, LanClient client, GameType gt, PlayerId seat) {
+        lanClient = client;
+        lanLocalSeat = seat;
+        Scene scene = (gt == GameType.PAO_DE_KUAI)
+                ? buildPdkLanTableShell(stage, cmd -> client.submitCommand(cmd), () -> lanLastSnapshot)
+                : buildLiarLanTableShell(stage, cmd -> client.submitCommand(cmd), () -> lanLastSnapshot);
+        if (lanLastSnapshot != null) applyLanSnapshot(stage, lanLastSnapshot);
+        return scene;
+    }
+
+    /** 联机跑得快桌壳：按钮提交走 submitter，刷新源 supplier。无 bot。 */
+    private Scene buildPdkLanTableShell(Stage stage, java.util.function.Consumer<GameCommand> submitter,
+                                        java.util.function.Supplier<GameSnapshot> snapshotSupplier) {
+        BorderPane table = new BorderPane();
+        table.getStyleClass().add("table-root");
+        table.setPrefSize(960, 600);
+        pdkStatus = new Label();
+        pdkStatus.getStyleClass().add("table-status-bar");
+        pdkStatus.setMaxWidth(Double.MAX_VALUE);
+        pdkStatus.setAlignment(Pos.CENTER);
+        table.setTop(pdkStatus);
+        pdkCenterBox = new HBox(10);
+        pdkCenterBox.getStyleClass().add("table-center-row");
+        pdkCenterBox.setAlignment(Pos.CENTER);
+        pdkCenterBox.setMinHeight(120);
+        table.setCenter(new StackPane(pdkCenterBox));
+        pdkHandBox = new HBox(6);
+        pdkHandBox.getStyleClass().add("table-hand-row");
+        pdkHandBox.setAlignment(Pos.CENTER);
+        pdkHandBox.setMinHeight(110);
+        pdkPlayBtn = new Button("出牌");
+        pdkPassBtn = new Button("不出");
+        for (Button b : List.of(pdkPlayBtn, pdkPassBtn)) b.getStyleClass().addAll("menu-btn", "table-action-btn");
+        pdkPlayBtn.setOnAction(e -> {
+            if (tableSelected.isEmpty()) { showInfo(stage, "请先选择要出的牌"); return; }
+            submitter.accept(new PlayPdkCards(List.copyOf(tableSelected)));
+            tableSelected.clear();
+        });
+        pdkPassBtn.setOnAction(e -> submitter.accept(new PassPdkTurn()));
+        HBox actions = new HBox(24, pdkPassBtn, pdkPlayBtn);
+        actions.setAlignment(Pos.CENTER);
+        table.setBottom(new VBox(14, pdkHandBox, actions));
+        pdkLog = new ListView<>();
+        pdkLog.getStyleClass().add("table-log");
+        pdkLog.setPrefWidth(220);
+        table.setRight(pdkLog);
+        return wrapTableScene(stage, table, "← 返回大厅");
+    }
+
+    private Scene buildLiarLanTableShell(Stage stage, java.util.function.Consumer<GameCommand> submitter,
+                                          java.util.function.Supplier<GameSnapshot> snapshotSupplier) {
+        BorderPane table = new BorderPane();
+        table.getStyleClass().add("table-root");
+        table.setPrefSize(960, 600);
+        liarTarget = new Label();
+        liarTarget.getStyleClass().add("table-liar-target");
+        liarPhase = new Label();
+        liarPhase.getStyleClass().add("table-liar-phase");
+        HBox topBar = new HBox(30, liarTarget, liarPhase);
+        topBar.setAlignment(Pos.CENTER);
+        topBar.getStyleClass().add("table-status-bar");
+        table.setTop(topBar);
+        liarOppStrip = new HBox(24);
+        liarOppStrip.getStyleClass().add("table-opponent-strip");
+        liarOppStrip.setAlignment(Pos.CENTER);
+        liarResolution = new Label();
+        liarResolution.getStyleClass().add("table-hint");
+        liarResolution.setWrapText(true);
+        liarResolution.setMaxWidth(640);
+        liarResolution.setAlignment(Pos.CENTER);
+        table.setCenter(new VBox(16, liarOppStrip, liarResolution));
+        liarHandBox = new HBox(8);
+        liarHandBox.getStyleClass().add("table-hand-row");
+        liarHandBox.setAlignment(Pos.CENTER);
+        liarHandBox.setMinHeight(110);
+        liarDeclareBtn = new Button("宣告");
+        liarTrustBtn = new Button("相信");
+        liarChallengeBtn = new Button("质疑");
+        for (Button b : List.of(liarDeclareBtn, liarTrustBtn, liarChallengeBtn)) b.getStyleClass().addAll("menu-btn", "table-action-btn");
+        liarDeclareBtn.setOnAction(e -> {
+            if (tableSelected.isEmpty() || tableSelected.size() > 3) { showInfo(stage, "请选择 1–3 张牌"); return; }
+            submitter.accept(new DeclareLiarCards(List.copyOf(tableSelected)));
+            tableSelected.clear();
+        });
+        liarTrustBtn.setOnAction(e -> submitter.accept(new TrustDeclaration()));
+        liarChallengeBtn.setOnAction(e -> submitter.accept(new ChallengeDeclaration()));
+        HBox actions = new HBox(24, liarDeclareBtn, liarTrustBtn, liarChallengeBtn);
+        actions.setAlignment(Pos.CENTER);
+        table.setBottom(new VBox(14, liarHandBox, actions));
+        liarLog = new ListView<>();
+        liarLog.getStyleClass().add("table-log");
+        liarLog.setPrefWidth(220);
+        table.setRight(liarLog);
+        return wrapTableScene(stage, table, "← 返回大厅");
+    }
+
+    /** 联机快照分发：按快照类型渲染对应桌。 */
+    private void applyLanSnapshot(Stage stage, GameSnapshot snap) {
+        if (snap == null) return;
+        if (snap instanceof PdkSnapshot p) {
+            renderPdkLan(p);
+        } else if (snap instanceof LiarSnapshot l) {
+            renderLiarLan(l);
+        }
+    }
+
+    private void renderPdkLan(PdkSnapshot snap) {
+        pdkHandBox.getChildren().clear();
+        boolean myTurn = snap.currentPlayer() == lanLocalSeat
+                && snap.phase() == GamePhase.PLAYING && snap.winner().isEmpty();
+        for (var card : snap.myHand().stream()
+                .sorted(java.util.Comparator.comparingInt(c -> c.rank().comparisonValue()))
+                .toList()) {
+            ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+            iv.setFitWidth(64); iv.setFitHeight(90);
+            iv.getStyleClass().add("table-card-img");
+            if (tableSelected.contains(card)) iv.setTranslateY(-16);
+            iv.setOnMouseClicked(e -> {
+                if (!myTurn) return;
+                if (tableSelected.contains(card)) { tableSelected.remove(card); iv.setTranslateY(0); }
+                else { tableSelected.add(card); iv.setTranslateY(-16); }
+            });
+            pdkHandBox.getChildren().add(iv);
+        }
+        pdkCenterBox.getChildren().clear();
+        snap.lastMove().ifPresent(move -> {
+            for (var card : move.cards()) {
+                ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+                iv.setFitWidth(56); iv.setFitHeight(78); iv.setMouseTransparent(true);
+                pdkCenterBox.getChildren().add(iv);
+            }
+        });
+        if (pdkCenterBox.getChildren().isEmpty()) {
+            pdkCenterBox.getChildren().add(new Label("（桌面为空）"));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("当前: ").append(seatName(snap.currentPlayer()));
+        snap.remainingCardCounts().forEach((p, n) -> sb.append("   ").append(seatName(p)).append(" 剩 ").append(n));
+        if (snap.winner().isPresent()) sb.append("   胜者:").append(seatName(snap.winner().get()));
+        pdkStatus.setText(sb.toString());
+        pdkLog.getItems().setAll(snap.publicEvents().stream().skip(Math.max(0, snap.publicEvents().size() - 40)).toList());
+        boolean canPlay = myTurn && !tableSelected.isEmpty();
+        pdkPlayBtn.setDisable(!canPlay);
+        pdkPassBtn.setDisable(!myTurn);
+    }
+
+    private void renderLiarLan(LiarSnapshot snap) {
+        liarTarget.setText("目标点数：" + snap.targetRank().label());
+        liarPhase.setText("阶段：" + phaseName(snap.liarPhase()));
+        liarOppStrip.getChildren().clear();
+        for (PlayerId p : List.of(PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4)) {
+            VBox seatBox = new VBox(6);
+            seatBox.setAlignment(Pos.CENTER);
+            Label name = new Label(seatName(p) + (p == lanLocalSeat ? "（你）" : "")
+                    + (snap.eliminatedPlayers().contains(p) ? " ✗" : ""));
+            name.getStyleClass().add("table-seat-name");
+            if (snap.eliminatedPlayers().contains(p)) name.getStyleClass().add("table-seat-dead");
+            HBox gun = new HBox(4);
+            gun.setAlignment(Pos.CENTER);
+            var gs = snap.guns().get(p);
+            int pulled = gs == null ? 0 : gs.shotsFired();
+            for (int i = 0; i < 6; i++) {
+                Label dot = new Label("●");
+                dot.setStyle(i < pulled ? "-fx-text-fill: rgba(255,80,80,0.85); -fx-font-size:14px;"
+                        : "-fx-text-fill: rgba(180,200,180,0.4); -fx-font-size:14px;");
+                gun.getChildren().add(dot);
+            }
+            seatBox.getChildren().addAll(name, gun, new Label("已扣" + pulled + "/6"));
+            liarOppStrip.getChildren().add(seatBox);
+        }
+        liarResolution.setText(snap.lastResolution().map(Object::toString).orElse(""));
+        liarHandBox.getChildren().clear();
+        boolean myTurn = snap.currentPlayer() == lanLocalSeat && snap.phase() == GamePhase.PLAYING;
+        for (var card : snap.myHand().stream()
+                .sorted(java.util.Comparator.comparingInt(c -> c.rank().comparisonValue()))
+                .toList()) {
+            ImageView iv = new ImageView(CsuCardBridge.faceImage(card));
+            iv.setFitWidth(64); iv.setFitHeight(90);
+            iv.getStyleClass().add("table-card-img");
+            if (tableSelected.contains(card)) iv.setTranslateY(-16);
+            iv.setOnMouseClicked(e -> {
+                if (!myTurn || snap.liarPhase() != LiarPhase.DECLARE) return;
+                if (tableSelected.contains(card)) { tableSelected.remove(card); iv.setTranslateY(0); }
+                else if (tableSelected.size() < 3) { tableSelected.add(card); iv.setTranslateY(-16); }
+            });
+            liarHandBox.getChildren().add(iv);
+        }
+        liarLog.getItems().setAll(snap.publicEvents().stream().skip(Math.max(0, snap.publicEvents().size() - 40)).toList());
+        liarDeclareBtn.setDisable(!(myTurn && snap.liarPhase() == LiarPhase.DECLARE));
+        liarTrustBtn.setDisable(!(myTurn && snap.liarPhase() == LiarPhase.RESPOND));
+        liarChallengeBtn.setDisable(!(myTurn && snap.liarPhase() == LiarPhase.RESPOND));
+    }
+
+    // ----------------------------- 牌桌小工具 -----------------------------
+
+    private static String seatName(PlayerId p) {
+        return switch (p) {
+            case SEAT_1 -> "你";
+            case SEAT_2 -> "西家";
+            case SEAT_3 -> "北家";
+            case SEAT_4 -> "东家";
+        };
+    }
+
+    private static String phaseName(LiarPhase ph) {
+        return switch (ph) {
+            case DECLARE -> "宣告";
+            case RESPOND -> "应答";
+            case RESOLVE -> "结算";
+            case FINISHED -> "结束";
+        };
+    }
+
+
+    /** 把当前 userNick/userAvatarGlyph/userStat 回填到选择游戏页的头像卡片节点。 */
+    private void refreshUserCard() {
+        userAvatarText.setText(userAvatarGlyph);
+        userNickLabel.setText(userNick);
+        userStatLabel.setText(userStat);
+    }
+
+    /** 构建“个人信息”编辑页：选择头像字符、编辑昵称、切换在线状态；保存后回填到选择游戏页。 */
+    private Scene buildProfileScene(Stage stage) {
+        StackPane root = new StackPane();
+
+        root.getChildren().add(sceneBackgroundImage("/bg_menu.png"));
+
+        ParticleField particles = new ParticleField();
+        root.getChildren().add(particles);
+
+        addCornerSuit(root, "♠", Color.rgb(255, 255, 255, 0.05), Pos.TOP_LEFT, true);
+        addCornerSuit(root, "♥", Color.rgb(255, 170, 160, 0.05), Pos.TOP_RIGHT, true);
+        addCornerSuit(root, "♣", Color.rgb(255, 255, 255, 0.05), Pos.BOTTOM_LEFT, true);
+        addCornerSuit(root, "♦", Color.rgb(255, 170, 160, 0.05), Pos.BOTTOM_RIGHT, true);
+
+        Label title = new Label("个人信息");
+        title.getStyleClass().add("game-choice-title");
+        Label sub = new Label("自定义你的头像与昵称");
+        sub.getStyleClass().add("game-choice-sub");
+
+        // ---------------- 当前预览：大号头像 + 昵称预览 ----------------
+        StackPane previewBadge = new StackPane();
+        previewBadge.getStyleClass().addAll("user-avatar", "user-avatar-lg");
+        Text previewGlyph = new Text(userAvatarGlyph);
+        previewGlyph.setFont(Font.font("Segoe UI Symbol", FontWeight.BOLD, 46));
+        previewGlyph.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.web("#fff3c4")),
+                new Stop(0.55, Color.web("#e8c25e")),
+                new Stop(1, Color.web("#b07f1e"))));
+        previewBadge.getChildren().add(previewGlyph);
+
+        Label previewNick = new Label(userNick);
+        previewNick.getStyleClass().add("profile-preview-nick");
+        Label previewStat = new Label(userStat);
+        previewStat.getStyleClass().add("user-stat");
+        VBox previewText = new VBox(4, previewNick, previewStat);
+        previewText.setAlignment(Pos.CENTER_LEFT);
+
+        HBox preview = new HBox(18, previewBadge, previewText);
+        preview.getStyleClass().add("profile-preview");
+        preview.setAlignment(Pos.CENTER_LEFT);
+
+        // ---------------- 头像选择：一排候选字符 ----------------
+        Label avatarHead = new Label("选择头像");
+        avatarHead.getStyleClass().add("settings-section");
+        String[] avatarChoices = {"♛", "♚", "♔", "♕", "♝", "♞", "♜", "♟", "🃏"};
+        ToggleGroup avatarGroup = new ToggleGroup();
+        HBox avatarRow = new HBox(12);
+        avatarRow.getStyleClass().add("profile-avatar-row");
+        for (String g : avatarChoices) {
+            ToggleButton btn = new ToggleButton(g);
+            btn.getStyleClass().add("profile-avatar-btn");
+            btn.setToggleGroup(avatarGroup);
+            btn.setUserData(g);
+            if (g.equals(userAvatarGlyph)) {
+                btn.setSelected(true);
+            }
+            btn.selectedProperty().addListener((o, a, sel) -> {
+                if (sel) {
+                    previewGlyph.setText(g);
+                }
+            });
+            avatarRow.getChildren().add(btn);
+        }
+        // 如果当前头像不在候选里，默认选中第一个，并把预览同步为当前
+        if (avatarGroup.getSelectedToggle() == null && !avatarRow.getChildren().isEmpty()) {
+            ((ToggleButton) avatarRow.getChildren().get(0)).setSelected(true);
+        }
+
+        // ---------------- 昵称编辑 ----------------
+        Label nickHead = new Label("昵称");
+        nickHead.getStyleClass().add("settings-section");
+        TextField nickField = new TextField(userNick);
+        nickField.getStyleClass().add("profile-nick-field");
+        nickField.setPromptText("输入你的昵称");
+        nickField.setPrefColumnCount(16);
+        nickField.textProperty().addListener((o, a, t) -> previewNick.setText(t.isEmpty() ? "玩家" : t));
+
+        // ---------------- 状态选择 ----------------
+        Label statHead = new Label("在线状态");
+        statHead.getStyleClass().add("settings-section");
+        String[] statChoices = {"在线 · 准备开局", "游戏中", "勿扰", "离线"};
+        ToggleGroup statGroup = new ToggleGroup();
+        HBox statRow = new HBox(10);
+        for (String s : statChoices) {
+            ToggleButton btn = new ToggleButton(s);
+            btn.getStyleClass().add("seg-toggle");
+            btn.setToggleGroup(statGroup);
+            btn.setUserData(s);
+            if (s.equals(userStat)) {
+                btn.setSelected(true);
+            }
+            btn.selectedProperty().addListener((o, a, sel) -> {
+                if (sel) {
+                    previewStat.setText(s);
+                }
+            });
+            statRow.getChildren().add(btn);
+        }
+        if (statGroup.getSelectedToggle() == null && !statRow.getChildren().isEmpty()) {
+            ((ToggleButton) statRow.getChildren().get(0)).setSelected(true);
+        }
+
+        // ---------------- 底部按钮：取消 / 保存并返回 ----------------
+        Button cancel = new Button("取消");
+        cancel.getStyleClass().add("settings-link-btn");
+        cancel.setOnAction(e -> {
+            if (gameChoiceScene != null) {
+                stage.setScene(gameChoiceScene);
+            }
+        });
+        Button save = new Button("保存并返回");
+        save.getStyleClass().addAll("menu-btn", "menu-btn-start", "profile-save-btn");
+        save.setOnAction(e -> {
+            String nick = nickField.getText().trim();
+            userNick = nick.isEmpty() ? "玩家" : nick;
+            ToggleButton avSel = (ToggleButton) avatarGroup.getSelectedToggle();
+            if (avSel != null) {
+                userAvatarGlyph = (String) avSel.getUserData();
+            }
+            ToggleButton stSel = (ToggleButton) statGroup.getSelectedToggle();
+            if (stSel != null) {
+                userStat = (String) stSel.getUserData();
+            }
+            refreshUserCard();
+            if (gameChoiceScene != null) {
+                stage.setScene(gameChoiceScene);
+            }
+        });
+        HBox actionRow = new HBox(14, cancel, save);
+        actionRow.getStyleClass().add("profile-action-row");
+        actionRow.setAlignment(Pos.CENTER);
+
+        // ---------------- 中央整体 ----------------
+        VBox center = new VBox(22, title, sub, preview, avatarHead, avatarRow,
+                nickHead, nickField, statHead, statRow, actionRow);
+        center.getStyleClass().add("profile-center");
+        center.setAlignment(Pos.CENTER);
+        StackPane.setAlignment(center, Pos.CENTER);
+
+        // 左上角返回按钮：回到选择游戏页（不保存）
+        Button back = new Button("← 返回选择游戏");
+        back.getStyleClass().add("game-back");
+        back.setOnAction(e -> {
+            if (gameChoiceScene != null) {
+                stage.setScene(gameChoiceScene);
+            }
+        });
+        StackPane.setAlignment(back, Pos.TOP_LEFT);
+        StackPane.setMargin(back, new Insets(22, 0, 0, 24));
+
+        root.getChildren().addAll(center, back);
+
+        Scene scene = new Scene(root);
+        var css = getClass().getResource("/app.css");
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
         stage.sceneProperty().addListener((o, oldS, newS) -> {
             if (newS == scene) {
                 particles.play();

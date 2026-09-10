@@ -2,5 +2,9 @@
 out/
 target/
 
+# IDE 配置
+.trae/
+.idea/
+
 # Maven
 *.log

@@ -23,9 +23,9 @@ set SRC=
 for /r src\main\java %%f in (*.java) do call set SRC=%%SRC%% "%%f"
 
 echo [build] compiling...
-javac --module-path lib --add-modules javafx.controls -encoding UTF-8 -parameters -d out %SRC%
+javac --module-path lib --add-modules javafx.controls -encoding UTF-8 -parameters -cp "lib\jackson\*" -d out %SRC%
 if errorlevel 1 pause & exit /b 1
 
 echo [run] launching...
-java --enable-native-access=javafx.graphics --module-path lib --add-modules javafx.controls -cp out com.cards.DeckApp %*
+java --enable-native-access=javafx.graphics --module-path lib --add-modules javafx.controls -cp "out;lib\jackson\*" com.cards.DeckApp %*
 endlocal
