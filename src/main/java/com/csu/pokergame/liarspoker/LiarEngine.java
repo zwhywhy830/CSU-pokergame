@@ -21,7 +21,7 @@ import com.csu.pokergame.core.engine.PlayerId;
 /**
  * 骗子酒馆引擎。四人（SEAT_1 本地 + SEAT_2/3/4 机器人），每人 1 滴血（中弹淘汰）。
  * 每人一把 6 仓手枪，开局随机决定子弹所在仓；被质疑失败后扣扳机一次，打到子弹仓淘汰。
- * 质疑结算或玩家出完手牌后重新洗牌发牌，保留手枪与淘汰状态。
+ * 质疑结算或玩家出完手牌后小局结束，重新洗牌发牌并重选主牌（目标点数），仅保留手枪与淘汰状态。
  * 本地玩家中弹即结束对局（提示输了）；其他玩家淘汰后继续，直到只剩一名存活者。
  */
 public final class LiarEngine implements GameEngine {
@@ -250,22 +250,28 @@ public final class LiarEngine implements GameEngine {
             return;
         }
 
-        // 重新洗牌发牌（保留手枪与淘汰状态）
-        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
-        events = appendEvent(events, "重新洗牌发牌，轮到 " + name(nextDeclarer));
-        state = new LiarState(newHands, newAlive, newGuns, s.targetRank(),
+        // 小局结束：重新洗牌发牌并重选主牌（目标点数），仅保留手枪与淘汰状态
+        Random r = random != null ? random : new Random();
+        Rank newTarget = randomTarget(r);
+        Map<PlayerId, List<Card>> newHands = dealHands(r);
+        events = appendEvent(events, "重新洗牌发牌，新目标点数 " + newTarget.label()
+                + "，轮到 " + name(nextDeclarer));
+        state = new LiarState(newHands, newAlive, newGuns, newTarget,
                 phase, nextDeclarer, null, List.of(), resolution, winner, events);
     }
 
     // ---------- 辅助 ----------
 
-    /** 出完手牌后的重新洗牌：保留 alive/guns/targetRank，仅重新发 hands。 */
+    /** 出完手牌后的重新洗牌：进入新小局，保留 alive/guns，重新发 hands 并重选目标点数。 */
     private void reshuffleAndDeal(String event, PlayerId nextDeclarer, LiarPhase phase, LiarResolution resolution,
                                  PlayerId winner) {
         LiarState s = state;
-        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
+        Random r = random != null ? random : new Random();
+        Rank newTarget = randomTarget(r);
+        Map<PlayerId, List<Card>> newHands = dealHands(r);
         List<String> events = withEvent(s.publicEvents(), event);
-        state = new LiarState(newHands, s.alive(), s.guns(), s.targetRank(),
+        events = appendEvent(events, "新小局目标点数 " + newTarget.label());
+        state = new LiarState(newHands, s.alive(), s.guns(), newTarget,
                 phase, nextDeclarer, null, List.of(),
                 resolution != null ? resolution : s.lastResolution(), winner, events);
     }
