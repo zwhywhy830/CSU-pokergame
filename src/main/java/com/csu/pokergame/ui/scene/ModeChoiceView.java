@@ -2,7 +2,9 @@ package com.csu.pokergame.ui.scene;
 
 import com.cards.ui.LobbyHelper;
 import com.cards.ui.ParticleField;
+import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.ui.AppShell;
 
 import javafx.geometry.Insets;
@@ -62,16 +64,16 @@ public final class ModeChoiceView extends StackPane {
                 "单人 · 离线", false, () -> {
                     LobbyHelper.clickSound();
                     if ("PDK".equals(GameChoiceView.SELECTED_GAME)) {
-                        shell.navigate("pdk");
+                        shell.transitionTo("pdk", SceneTransition.Type.ENTER_GAME);
                     } else {
-                        shell.navigate("liar");
+                        shell.transitionTo("liar", SceneTransition.Type.ENTER_GAME);
                     }
                 });
         Button lanPlay = LobbyHelper.gameOption("🌐", "局域网联机",
                 "创建或加入局域网房间\n与身边好友同台竞技",
                 "多人 · 联机", false, () -> {
                     LobbyHelper.clickSound();
-                    shell.navigate("lan-lobby");
+                    shell.transitionTo("lan-lobby", SceneTransition.Type.ZOOM);
                 });
 
         HBox options = new HBox(28, vsCpu, lanPlay);
@@ -85,7 +87,7 @@ public final class ModeChoiceView extends StackPane {
         back.getStyleClass().add("game-back");
         back.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("game-choice");
+            shell.transitionTo("game-choice", SceneTransition.Type.FADE);
         });
         StackPane.setAlignment(back, Pos.TOP_LEFT);
         StackPane.setMargin(back, new Insets(22, 0, 0, 24));
@@ -96,6 +98,8 @@ public final class ModeChoiceView extends StackPane {
         StackPane.setAlignment(center, Pos.CENTER);
 
         getChildren().addAll(center, back);
+
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 
     /** 把 GameChoiceView.SELECTED_GAME 映射为顶部徽标显示的游戏名。 */

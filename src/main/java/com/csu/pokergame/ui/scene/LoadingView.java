@@ -1,6 +1,7 @@
 package com.csu.pokergame.ui.scene;
 
 import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.ui.AppShell;
 
 import javafx.animation.Interpolator;
@@ -133,5 +134,7 @@ public final class LoadingView extends StackPane {
             shell.navigate("game-choice");
         });
         intro.play();
+
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 }

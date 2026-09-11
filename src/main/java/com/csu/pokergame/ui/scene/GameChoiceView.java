@@ -1,8 +1,10 @@
 package com.csu.pokergame.ui.scene;
 
 import com.cards.ui.LobbyHelper;
+import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.AvatarView;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.player.PlayerManager;
 import com.csu.pokergame.player.PlayerProfile;
 import com.csu.pokergame.ui.AppShell;
@@ -61,13 +63,13 @@ public final class GameChoiceView extends StackPane {
                 "三人 16 张经典玩法\n先出完手牌者获胜",
                 "扑克 · 竞速出牌", true, () -> {
                     SELECTED_GAME = "PDK";
-                    shell.navigate("mode-choice");
+                    shell.transitionTo("mode-choice", SceneTransition.Type.ZOOM);
                 });
         Button liarBar = LobbyHelper.gameOption("🃏", "骗子酒馆",
                 "扑克与骰子模式\n谎言与质疑并存，活到最后即胜",
                 "聚会 · 心理博弈", false, () -> {
                     SELECTED_GAME = "LIAR";
-                    shell.navigate("mode-choice");
+                    shell.transitionTo("mode-choice", SceneTransition.Type.ZOOM);
                 });
 
         HBox options = new HBox(28, runFast, liarBar);
@@ -81,7 +83,7 @@ public final class GameChoiceView extends StackPane {
         back.getStyleClass().add("game-back");
         back.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("home");
+            shell.transitionTo("home", SceneTransition.Type.FADE);
         });
         StackPane.setAlignment(back, Pos.TOP_RIGHT);
         StackPane.setMargin(back, new Insets(22, 24, 0, 0));
@@ -105,7 +107,7 @@ public final class GameChoiceView extends StackPane {
         choiceAvatar.setCursor(Cursor.HAND);
         choiceAvatar.setOnMouseClicked(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("profile-edit");
+            shell.transitionTo("profile-edit", SceneTransition.Type.OPEN_PROFILE);
         });
 
         VBox center = new VBox(34, title, sub, options);
@@ -125,5 +127,7 @@ public final class GameChoiceView extends StackPane {
                 particles.stop();
             }
         });
+
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 }

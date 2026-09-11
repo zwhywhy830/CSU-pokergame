@@ -2,7 +2,9 @@ package com.csu.pokergame.ui.scene;
 
 import com.cards.ui.LobbyHelper;
 import com.cards.ui.ParticleField;
+import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.player.PlayerManager;
 import com.csu.pokergame.player.PlayerProfile;
 import com.csu.pokergame.ui.AppShell;
@@ -52,6 +54,7 @@ public final class ProfileEditView extends StackPane {
     public ProfileEditView(AppShell shell) {
         this.shell = shell;
         buildLayout();
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 
     private void buildLayout() {
@@ -174,7 +177,7 @@ public final class ProfileEditView extends StackPane {
         cancel.getStyleClass().add("settings-link-btn");
         cancel.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("game-choice");
+            shell.transitionTo("game-choice", SceneTransition.Type.FADE);
         });
         Button save = new Button("保存并返回");
         save.getStyleClass().addAll("menu-btn", "menu-btn-start", "profile-save-btn");
@@ -193,7 +196,7 @@ public final class ProfileEditView extends StackPane {
             prof.setName(finalNick);
             prof.setAvatar(finalAvatar);
             PlayerManager.getInstance().save();
-            shell.navigate("game-choice");
+            shell.transitionTo("game-choice", SceneTransition.Type.FADE);
         });
         HBox actionRow = new HBox(14, cancel, save);
         actionRow.getStyleClass().add("profile-action-row");
@@ -211,7 +214,7 @@ public final class ProfileEditView extends StackPane {
         back.getStyleClass().add("game-back");
         back.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("game-choice");
+            shell.transitionTo("game-choice", SceneTransition.Type.FADE);
         });
         StackPane.setAlignment(back, Pos.TOP_LEFT);
         StackPane.setMargin(back, new Insets(22, 0, 0, 24));

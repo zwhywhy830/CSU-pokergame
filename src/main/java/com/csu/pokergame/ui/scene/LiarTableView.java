@@ -7,12 +7,18 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.component.CoinBar;
+import com.cards.ui.effect.GameAnimationService;
+import com.cards.ui.effect.WinCelebration;
 import com.cards.ui.liar.LiarActionBar;
 import com.cards.ui.liar.LiarClaimPanel;
 import com.cards.ui.liar.LiarHandView;
 import com.cards.ui.liar.LiarPlayerSeat;
 import com.cards.ui.liar.LiarRiskIndicator;
+import com.csu.pokergame.audio.AudioService;
+import com.csu.pokergame.audio.SoundEffect;
 import com.csu.pokergame.core.card.Card;
 import com.csu.pokergame.core.engine.GameCommand;
 import com.csu.pokergame.core.engine.GameSnapshot;
@@ -29,6 +35,8 @@ import com.csu.pokergame.liarspoker.LiarRandomPolicy;
 import com.csu.pokergame.liarspoker.LiarResolution;
 import com.csu.pokergame.liarspoker.LiarSnapshot;
 import com.csu.pokergame.liarspoker.TrustDeclaration;
+import com.csu.pokergame.player.CoinService;
+import com.csu.pokergame.player.PlayerManager;
 import com.csu.pokergame.ui.AppShell;
 
 import javafx.animation.PauseTransition;
@@ -36,10 +44,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.effect.BoxBlur;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
@@ -58,6 +68,11 @@ public final class LiarTableView extends BorderPane {
 
     private static final PlayerId LOCAL = PlayerId.SEAT_1;
 
+    /** 入场费 / 胜负奖励（与跑得快同源，经 CoinService 写流水并落盘）。 */
+    private static final int GAME_ENTRY_COST = 100;
+    private static final int GAME_WIN_REWARD = 200;
+    private static final int GAME_LOSS_REWARD = 50;
+
     /** 座位顺序与容器 index 一一对应。 */
     private static final PlayerId[] SEAT_ORDER = {
             PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4
@@ -74,6 +89,12 @@ public final class LiarTableView extends BorderPane {
     private final com.cards.ui.liar.LiarTableView liarView =
             new com.cards.ui.liar.LiarTableView();
 
+    /** 顶部金币栏（每帧与 CoinService 当前账号余额同步）。 */
+    private final CoinBar liarCoinBar;
+
+    /** 本局是否已结算（防止重复结算 / 重复叠加结算层）。 */
+    private boolean settled;
+
     public LiarTableView(AppShell shell) {
         this.shell = shell;
         this.engine = new LiarEngine(new Random());
@@ -84,9 +105,18 @@ public final class LiarTableView extends BorderPane {
                 PlayerId.SEAT_3, new RuleBotController(new LiarFixedPolicy(false)),
                 PlayerId.SEAT_4, new RuleBotController(new LiarRandomPolicy(new Random())));
 
+        this.liarCoinBar = liarView.getCoinBar();
+        // 入场费：每局重新收取（与跑得快同源），扣完同步金币栏显示实时余额
+        CoinService.getInstance().costGold(GAME_ENTRY_COST, "骗子酒馆入场");
+        liarCoinBar.setCoins(CoinService.getInstance().getGold());
+
+        // 座位名 / 等级：本人用真实等级，三家 AI 固定 8 级
+        setupSeatProfiles();
+
         buildLayout();
         wireActions();
         refresh();
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 
     private void buildLayout() {
@@ -94,17 +124,58 @@ public final class LiarTableView extends BorderPane {
         BackgroundManager.Background bg = BackgroundManager.createGameBackground();
 
         // 顶部：返回 + 设置
-        Button back = new Button("返回");
-        back.setOnAction(e -> shell.navigate("mode-choice"));
+        Button back = new Button("← 返回模式选择");
+        back.setOnAction(e -> shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY));
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());
         HBox topBar = new HBox(12, back, settings);
         topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.setPadding(new Insets(8, 12, 8, 12));
 
-        // 组装：背景 + 顶栏 + 骗子酒馆容器
-        StackPane root = new StackPane(bg.root(), new BorderPane(topBar, liarView, null, null, null));
+        // 组装：背景 + 角落花色水印 + 顶栏 + 骗子酒馆容器
+        StackPane root = new StackPane(bg.root());
+        addCornerSuit(root, "♠", Color.rgb(255, 255, 255, 0.05), Pos.TOP_LEFT, true);
+        addCornerSuit(root, "♥", Color.rgb(255, 170, 160, 0.05), Pos.TOP_RIGHT, true);
+        addCornerSuit(root, "♣", Color.rgb(255, 255, 255, 0.05), Pos.BOTTOM_LEFT, true);
+        addCornerSuit(root, "♦", Color.rgb(255, 170, 160, 0.05), Pos.BOTTOM_RIGHT, true);
+        root.getChildren().add(new BorderPane(topBar, liarView, null, null, null));
         setCenter(root);
+    }
+
+    /** 座位名 / 等级：本人用真实等级，三家 AI 固定 8 级（与 deckapp-ui 一致）。 */
+    private void setupSeatProfiles() {
+        int userLevel = PlayerManager.getInstance().getProfile().getLevel();
+        String[] names = {"你", "西家", "北家", "东家"};
+        int[] levels = {userLevel, 8, 8, 8};
+        for (int i = 0; i < SEAT_ORDER.length; i++) {
+            LiarPlayerSeat seat = liarView.getSeat(i);
+            if (seat == null) {
+                continue;
+            }
+            seat.setPlayerName(names[i]);
+            seat.setLevel(levels[i]);
+        }
+    }
+
+    /** 在背景四角叠加花色水印（watermark=true 时加微模糊作为暗纹底）。 */
+    private void addCornerSuit(StackPane root, String g, Color color, Pos corner, boolean watermark) {
+        Label l = new Label(g);
+        l.setTextFill(color);
+        l.setFont(Font.font("Segoe UI Symbol", 150));
+        l.getStyleClass().add("menu-corner");
+        l.setMouseTransparent(true);
+        if (watermark) {
+            l.setEffect(new BoxBlur(4, 4, 3));
+        }
+        StackPane.setAlignment(l, corner);
+        Insets m = switch (corner) {
+            case TOP_LEFT -> new Insets(8, 0, 0, 26);
+            case TOP_RIGHT -> new Insets(8, 26, 0, 0);
+            case BOTTOM_LEFT -> new Insets(0, 0, 10, 26);
+            default -> new Insets(0, 26, 10, 0);
+        };
+        StackPane.setMargin(l, m);
+        root.getChildren().add(l);
     }
 
     private void wireActions() {
@@ -125,10 +196,13 @@ public final class LiarTableView extends BorderPane {
     private void refresh() {
         LiarSnapshot snap = (LiarSnapshot) engine.snapshotFor(LOCAL);
 
-        // 顶部：阶段 / 存活 / 目标点数
+        // 金币栏：每帧与当前账号余额对齐（充值 / 商城 / 换账号后不残留旧数字）
+        liarCoinBar.setCoins(CoinService.getInstance().getGold());
+
+        // 顶部：阶段 / 存活 / 目标点数 + 入场费
         liarView.setPhaseText(phaseName(snap.liarPhase()));
         liarView.setAliveText(snap.alivePlayers().size());
-        liarView.setTipText("目标点数：" + snap.targetRank().label());
+        liarView.setTipText("目标点数：" + snap.targetRank().label() + " · 入场 " + GAME_ENTRY_COST);
 
         // 四家座位：生命值 + 状态
         renderSeats(snap);
@@ -296,6 +370,11 @@ public final class LiarTableView extends BorderPane {
     }
 
     private void renderResult(LiarSnapshot snap) {
+        if (settled) {
+            return;
+        }
+        settled = true;
+
         boolean localWon = snap.winner().orElseThrow() == LOCAL;
         if (localWon) {
             liarView.playVictoryGlow();
@@ -303,41 +382,59 @@ public final class LiarTableView extends BorderPane {
             liarView.playDefeatEffect();
         }
 
-        StackPane overlay = new StackPane();
-        overlay.getStyleClass().add("result-overlay");
-        VBox box = new VBox(16);
-        box.setAlignment(Pos.CENTER);
-        box.getStyleClass().add("result-box");
+        // 金币结算：胜/负奖励 + 音效（与跑得快同源，唯一入口 CoinService）
+        settleLiar(localWon);
 
-        Label title = new Label(localWon ? "你赢了！" : "你输了！");
-        title.getStyleClass().add(localWon ? "result-title-win" : "result-title-lose");
-
-        String reason = "";
+        // 副标题：复用原结算原因文案
+        String subtitle;
         if (snap.lastResolution().isPresent()) {
             LiarResolution res = snap.lastResolution().get();
             if (res.shooter() == LOCAL && res.killed()) {
-                reason = "你扣扳机打中子弹仓，被淘汰";
+                subtitle = "你扣扳机打中子弹仓，被淘汰";
             } else if (!localWon) {
-                reason = name(snap.winner().orElseThrow()) + " 是最后存活者";
+                subtitle = name(snap.winner().orElseThrow()) + " 是最后存活者";
+            } else {
+                subtitle = "你是最后存活者";
             }
+        } else {
+            subtitle = localWon ? "你是最后存活者" : name(snap.winner().orElseThrow()) + " 是最后存活者";
         }
-        Label detail = new Label(reason);
-        detail.getStyleClass().add("result-detail");
+
+        // 终局庆祝层：胜利金色星光 / 失败灰化（替换原 result-overlay）
+        WinCelebration celebration = new WinCelebration(localWon, subtitle, null);
 
         Button again = new Button("重新开始");
-        again.getStyleClass().add("primary");
-        again.setOnAction(e -> shell.navigate("liar"));
+        again.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
+        again.setOnAction(e -> {
+            celebration.stop();
+            shell.transitionTo("liar", SceneTransition.Type.ENTER_GAME);
+        });
         Button back = new Button("返回游戏选择");
-        back.setOnAction(e -> shell.navigate("mode-choice"));
-
-        HBox buttons = new HBox(12, again, back);
+        back.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-back");
+        back.setOnAction(e -> {
+            celebration.stop();
+            shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
+        });
+        HBox buttons = new HBox(22, again, back);
         buttons.setAlignment(Pos.CENTER);
-
-        box.getChildren().addAll(title, detail, buttons);
-        overlay.getChildren().add(box);
+        StackPane.setAlignment(buttons, Pos.BOTTOM_CENTER);
+        StackPane.setMargin(buttons, new Insets(0, 0, 60, 0));
+        celebration.getChildren().add(buttons);
 
         StackPane root = (StackPane) getCenter();
-        root.getChildren().add(overlay);
+        root.getChildren().add(celebration);
+    }
+
+    /**
+     * 本局结算：胜/负奖励经 {@link CoinService} 写入当前账号并落盘，并播放对应音效。
+     */
+    private void settleLiar(boolean win) {
+        CoinService coinService = CoinService.getInstance();
+        int goldDelta = win ? GAME_WIN_REWARD : GAME_LOSS_REWARD;
+        coinService.addGold(goldDelta, win ? "骗子酒馆胜利奖励" : "骗子酒馆参与奖励");
+        liarCoinBar.setCoins(coinService.getGold());
+        AudioService.getInstance()
+                .playEffect(win ? SoundEffect.WIN : SoundEffect.LOSE);
     }
 
     private static String phaseName(LiarPhase phase) {
@@ -351,10 +448,10 @@ public final class LiarTableView extends BorderPane {
 
     private static String name(PlayerId p) {
         return switch (p) {
-            case SEAT_1 -> "用户";
-            case SEAT_2 -> "AI1";
-            case SEAT_3 -> "AI2";
-            case SEAT_4 -> "AI3";
+            case SEAT_1 -> "你";
+            case SEAT_2 -> "西家";
+            case SEAT_3 -> "北家";
+            case SEAT_4 -> "东家";
         };
     }
 }

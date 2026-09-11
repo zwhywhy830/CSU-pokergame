@@ -3,8 +3,10 @@ package com.csu.pokergame.ui.scene;
 import com.cards.render.CanvasCardRenderer;
 import com.cards.render.CardRenderer;
 import com.cards.ui.LobbyHelper;
+import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.AvatarView;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.player.AccountService;
 import com.csu.pokergame.player.CoinService;
 import com.csu.pokergame.player.PlayerGrowthService;
@@ -72,6 +74,7 @@ public final class HomeView extends StackPane {
         this.shell = shell;
         getStyleClass().add("home-view");
         buildLobby();
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
 
     // ============================================================= 大厅构建
@@ -141,7 +144,7 @@ public final class HomeView extends StackPane {
         start.setTooltip(new Tooltip("挑选一款游戏开始对局"));
         start.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("loading");
+            shell.transitionTo("loading", SceneTransition.Type.ENTER_GAME);
         });
         // 主按钮辉光挂在外层 holder（避免与按钮 CSS 内阴影互相覆盖）+ hover 放大反馈
         StackPane startHolder = new StackPane(start);
@@ -201,7 +204,7 @@ public final class HomeView extends StackPane {
         StackPane.setMargin(gearBtn, new Insets(20, 26, 0, 0));
         gearBtn.setOnAction(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("settings");
+            shell.transitionTo("settings", SceneTransition.Type.FADE);
         });
         getChildren().add(gearBtn);
 
@@ -217,17 +220,17 @@ public final class HomeView extends StackPane {
         Tooltip.install(homeAvatar, new Tooltip("查看个人主页"));
         homeAvatar.setOnMouseClicked(e -> {
             LobbyHelper.clickSound();
-            shell.navigate("profile");
+            shell.transitionTo("profile", SceneTransition.Type.OPEN_PROFILE);
         });
         StackPane.setAlignment(homeAvatar, Pos.TOP_LEFT);
         StackPane.setMargin(homeAvatar, new Insets(22, 0, 0, 24));
         getChildren().add(homeAvatar);
 
         // ================= 底部功能入口：游戏大厅 / 编辑资料 / 设置 =================
-        Button hallEntry = LobbyHelper.lobbyEntry("🏛", "游戏大厅", () -> shell.navigate("game-choice"));
+        Button hallEntry = LobbyHelper.lobbyEntry("🏛", "游戏大厅", () -> shell.transitionTo("game-choice", SceneTransition.Type.ZOOM));
         // 「个人信息」的名字已归个人中心页所有，这里明确为"编辑资料"，避免两个入口语义混淆
-        Button profileEntry = LobbyHelper.lobbyEntry("👤", "编辑资料", () -> shell.navigate("profile-edit"));
-        Button settingsEntry = LobbyHelper.lobbyEntry("⚙", "设置", () -> shell.navigate("settings"));
+        Button profileEntry = LobbyHelper.lobbyEntry("👤", "编辑资料", () -> shell.transitionTo("profile-edit", SceneTransition.Type.OPEN_PROFILE));
+        Button settingsEntry = LobbyHelper.lobbyEntry("⚙", "设置", () -> shell.transitionTo("settings", SceneTransition.Type.FADE));
         HBox bottomBar = new HBox(18, hallEntry, profileEntry, settingsEntry);
         bottomBar.getStyleClass().add("lobby-bottom-bar");
         bottomBar.setAlignment(Pos.CENTER);

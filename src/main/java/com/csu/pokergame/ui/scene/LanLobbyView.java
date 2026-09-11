@@ -1,12 +1,16 @@
 package com.csu.pokergame.ui.scene;
 
+import com.cards.ui.LobbyHelper;
+import com.cards.ui.ParticleField;
+import com.cards.ui.animation.SceneTransition;
+import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.effect.GameAnimationService;
 import com.csu.pokergame.core.engine.PlayerId;
 import com.csu.pokergame.network.GameType;
 import com.csu.pokergame.network.LanClient;
 import com.csu.pokergame.network.LanHost;
 import com.csu.pokergame.network.RoomPlayer;
 import com.csu.pokergame.network.RoomSnapshot;
-import com.csu.pokergame.network.WireMessage;
 import com.csu.pokergame.ui.AppShell;
 
 import javafx.application.Platform;
@@ -16,48 +20,96 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 
 /**
- * 局域网联机大厅:两张卡片(创建房间 / 加入房间)。
- * 创建房间后显示主机地址、端口与已加入玩家列表,人数齐时启用"开始游戏"。
- * 加入房间后输入主机 IPv4,等待主机开始。
+ * 局域网联机大厅：两张卡片（创建房间 / 加入房间）。
+ * 创建房间后显示主机地址、端口与已加入玩家列表，人数齐时启用“开始游戏”。
+ * 加入房间后输入主机 IPv4，等待主机开始。
+ *
+ * <p>从 DeckApp.buildLanLobbyScene 改造而来：不再自建 {@link javafx.scene.Scene}，
+ * 而是直接继承 {@link StackPane}，由 {@link AppShell} 统一装进单一 Scene；
+ * 背景、四角花色水印、点击音效、按钮反馈全部复用 {@link LobbyHelper} 与
+ * {@link BackgroundManager}，CSS 由全局样式表负责。
  */
-public final class LanLobbyView extends BorderPane {
+public final class LanLobbyView extends StackPane {
 
     private LanHost host;
     private LanClient client;
+    private ParticleField particles;
+
+    /** 中央内容容器：初始为「创建 / 加入」两张卡片，进入房间后切换为房间面板。 */
+    private final VBox contentArea = new VBox();
 
     public LanLobbyView(AppShell shell) {
-        setPadding(new Insets(16));
+        // ---------------- 背景：大厅同源美术层 + 粒子 ----------------
+        BackgroundManager.Background bgLayers = BackgroundManager.createLobbyBackground();
+        getChildren().add(bgLayers.root());
+        particles = bgLayers.particles();
 
-        // 顶部:左返回模式选择,中间标题,右设置
-        Button back = new Button("返回模式选择");
-        back.setOnAction(e -> {
-            shutdownAll();
-            shell.navigate("mode-choice");
+        // 四角花色水印：低透明度 + 微模糊，作暗纹底（与其他大厅页一致）
+        LobbyHelper.addCornerSuit(this, "♠", Color.rgb(255, 255, 255, 0.05), Pos.TOP_LEFT, true);
+        LobbyHelper.addCornerSuit(this, "♥", Color.rgb(255, 170, 160, 0.05), Pos.TOP_RIGHT, true);
+        LobbyHelper.addCornerSuit(this, "♣", Color.rgb(255, 255, 255, 0.05), Pos.BOTTOM_LEFT, true);
+        LobbyHelper.addCornerSuit(this, "♦", Color.rgb(255, 170, 160, 0.05), Pos.BOTTOM_RIGHT, true);
+
+        // 粒子动画仅在本页显示时运行，切走后暂停以节省资源
+        sceneProperty().addListener((o, oldScene, newScene) -> {
+            if (newScene != null) {
+                particles.play();
+            } else if (oldScene != null) {
+                particles.stop();
+            }
         });
-        Button settings = new Button("设置");
-        settings.setOnAction(e -> shell.openSettings());
-        Label title = new Label("局域网联机");
-        title.getStyleClass().add("home-title");
-        BorderPane topBar = new BorderPane();
-        topBar.setLeft(back);
-        topBar.setCenter(title);
-        topBar.setRight(settings);
-        BorderPane.setAlignment(title, Pos.CENTER);
-        setTop(topBar);
 
-        // 中央:两张卡片
-        HBox cards = new HBox(32);
+        // ---------------- 顶部条：左返回 / 右设置 ----------------
+        Button back = new Button("← 返回模式选择");
+        back.getStyleClass().add("game-back");
+        back.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            shutdownAll();
+            shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
+        });
+        StackPane.setAlignment(back, Pos.TOP_LEFT);
+        StackPane.setMargin(back, new Insets(22, 0, 0, 24));
+
+        Button settings = new Button("⚙ 设置");
+        settings.getStyleClass().add("game-back");
+        settings.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            shell.openSettings();
+        });
+        StackPane.setAlignment(settings, Pos.TOP_RIGHT);
+        StackPane.setMargin(settings, new Insets(22, 24, 0, 0));
+
+        // ---------------- 中央内容：标题 + 副标题 + 两张卡片 ----------------
+        Label title = new Label("局域网联机");
+        title.getStyleClass().add("game-choice-title");
+        Label sub = new Label("创建房间成为主机，或输入主机 IP 加入");
+        sub.getStyleClass().add("game-choice-sub");
+
+        HBox cards = new HBox(32, createRoomCard(shell), joinRoomCard(shell));
         cards.setAlignment(Pos.CENTER);
-        cards.setPadding(new Insets(48, 16, 16, 16));
-        cards.getChildren().add(createRoomCard(shell));
-        cards.getChildren().add(joinRoomCard(shell));
-        setCenter(cards);
+        cards.setPadding(new Insets(0, 48, 0, 48));
+        HBox.setHgrow(cards.getChildren().get(0), Priority.ALWAYS);
+        HBox.setHgrow(cards.getChildren().get(1), Priority.ALWAYS);
+
+        contentArea.setAlignment(Pos.CENTER);
+        contentArea.setPadding(new Insets(48, 16, 16, 16));
+        contentArea.getChildren().addAll(title, sub, cards);
+        StackPane.setAlignment(contentArea, Pos.CENTER);
+
+        getChildren().addAll(contentArea, back, settings);
+
+        // 统一为按钮叠加悬浮反馈（不覆盖各自 setOnAction）
+        GameAnimationService.getInstance().installButtonFeedback(this);
     }
+
+    // ============================================================= 创建房间卡片
 
     private VBox createRoomCard(AppShell shell) {
         VBox card = new VBox(10);
@@ -67,7 +119,7 @@ public final class LanLobbyView extends BorderPane {
 
         Label title = new Label("创建房间");
         title.getStyleClass().add("title");
-        Label desc = new Label("作为主机创建房间,等待其他玩家加入");
+        Label desc = new Label("作为主机创建房间，等待其他玩家加入");
         desc.getStyleClass().add("desc");
         desc.setWrapText(true);
         desc.setPrefWidth(240);
@@ -77,14 +129,23 @@ public final class LanLobbyView extends BorderPane {
         ToggleButton pdkBtn = new ToggleButton("跑得快 (3 人)");
         ToggleButton liarBtn = new ToggleButton("骗子酒馆 (4 人)");
         pdkBtn.setSelected(true);
-        pdkBtn.setOnAction(e -> { pdkBtn.setSelected(true); liarBtn.setSelected(false); });
-        liarBtn.setOnAction(e -> { liarBtn.setSelected(true); pdkBtn.setSelected(false); });
+        pdkBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            pdkBtn.setSelected(true);
+            liarBtn.setSelected(false);
+        });
+        liarBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            liarBtn.setSelected(true);
+            pdkBtn.setSelected(false);
+        });
         HBox gameTypes = new HBox(8, pdkBtn, liarBtn);
         gameTypes.setAlignment(Pos.CENTER);
 
         Button create = new Button("创建");
         create.getStyleClass().add("primary");
         create.setOnAction(e -> {
+            LobbyHelper.clickSound();
             GameType type = pdkBtn.isSelected() ? GameType.PAO_DE_KUAI : GameType.LIARS_POKER;
             openHostRoom(shell, type);
         });
@@ -92,6 +153,8 @@ public final class LanLobbyView extends BorderPane {
         card.getChildren().addAll(title, desc, gameTypes, create);
         return card;
     }
+
+    // ============================================================= 加入房间卡片
 
     private VBox joinRoomCard(AppShell shell) {
         VBox card = new VBox(10);
@@ -110,6 +173,7 @@ public final class LanLobbyView extends BorderPane {
         TextField ipField = new TextField();
         ipField.setPromptText("如 192.168.1.10");
         ipField.setPrefWidth(200);
+        ipField.getStyleClass().add("lan-ip-field");
 
         Label seatLabel = new Label("选择座位：");
         seatLabel.getStyleClass().add("desc");
@@ -123,12 +187,16 @@ public final class LanLobbyView extends BorderPane {
         seat2.setUserData(PlayerId.SEAT_2);
         seat3.setUserData(PlayerId.SEAT_3);
         seat4.setUserData(PlayerId.SEAT_4);
+        seat2.setOnAction(e -> LobbyHelper.clickSound());
+        seat3.setOnAction(e -> LobbyHelper.clickSound());
+        seat4.setOnAction(e -> LobbyHelper.clickSound());
         HBox seatRow = new HBox(8, seat2, seat3, seat4);
         seatRow.setAlignment(Pos.CENTER);
 
         Button join = new Button("加入");
         join.getStyleClass().add("primary");
         join.setOnAction(e -> {
+            LobbyHelper.clickSound();
             String ip = ipField.getText().trim();
             if (ip.isEmpty()) {
                 return;
@@ -145,7 +213,7 @@ public final class LanLobbyView extends BorderPane {
         return card;
     }
 
-    // ------ 主机房间面板 ------
+    // ============================================================= 主机房间面板
 
     private void openHostRoom(AppShell shell, GameType type) {
         try {
@@ -160,7 +228,7 @@ public final class LanLobbyView extends BorderPane {
         roomBox.setPadding(new Insets(48, 16, 16, 16));
 
         Label title = new Label("等待玩家加入");
-        title.getStyleClass().add("home-title");
+        title.getStyleClass().add("game-choice-title");
 
         Label addr = new Label("主机地址:" + host.localAddress() + ":" + host.port());
         addr.getStyleClass().add("status-label");
@@ -173,23 +241,25 @@ public final class LanLobbyView extends BorderPane {
         startBtn.getStyleClass().add("primary");
         startBtn.setDisable(true);
         startBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
             try {
                 host.startGame();
                 shell.register("lan-host-table", () -> new LanGameTableView(shell, host));
                 shell.navigate("lan-host-table");
             } catch (Exception ex) {
-                // 不应发生,因为按钮 disable
+                // 不应发生，因为按钮 disable
             }
         });
 
         Button cancel = new Button("取消并返回");
         cancel.setOnAction(e -> {
+            LobbyHelper.clickSound();
             shutdownAll();
             shell.navigate("lan-lobby");
         });
 
         roomBox.getChildren().addAll(title, addr, playersTitle, playersBox, startBtn, cancel);
-        setCenter(roomBox);
+        contentArea.getChildren().setAll(roomBox);
 
         host.setOnRoomUpdate(snapshot -> Platform.runLater(() -> {
             renderHostPlayersBox(shell, snapshot, playersBox);
@@ -231,6 +301,7 @@ public final class LanLobbyView extends BorderPane {
                 Button addBot = new Button("加机器人");
                 addBot.getStyleClass().add("primary");
                 addBot.setOnAction(e -> {
+                    LobbyHelper.clickSound();
                     try {
                         host.addBot(p.seat());
                     } catch (Exception ex) {
@@ -242,14 +313,17 @@ public final class LanLobbyView extends BorderPane {
                 // 机器人 → 移除按钮
                 Button removeBot = new Button("移除");
                 removeBot.getStyleClass().add("danger");
-                removeBot.setOnAction(e -> host.removeBot(p.seat()));
+                removeBot.setOnAction(e -> {
+                    LobbyHelper.clickSound();
+                    host.removeBot(p.seat());
+                });
                 row.getChildren().add(removeBot);
             }
             playersBox.getChildren().add(row);
         }
     }
 
-    // ------ 客户端加入面板 ------
+    // ============================================================= 客户端加入面板
 
     private void openClientRoom(AppShell shell, String hostIp, PlayerId requestedSeat) {
         client = new LanClient(hostIp);
@@ -259,7 +333,7 @@ public final class LanLobbyView extends BorderPane {
         roomBox.setPadding(new Insets(48, 16, 16, 16));
 
         Label title = new Label("已加入房间,等待主机开始");
-        title.getStyleClass().add("home-title");
+        title.getStyleClass().add("game-choice-title");
 
         Label status = new Label("连接中...");
         status.getStyleClass().add("status-label");
@@ -270,12 +344,13 @@ public final class LanLobbyView extends BorderPane {
 
         Button leave = new Button("离开房间");
         leave.setOnAction(e -> {
+            LobbyHelper.clickSound();
             shutdownAll();
             shell.navigate("lan-lobby");
         });
 
         roomBox.getChildren().addAll(title, status, playersTitle, playersBox, leave);
-        setCenter(roomBox);
+        contentArea.getChildren().setAll(roomBox);
 
         client.setOnRoomUpdate(snapshot -> Platform.runLater(() -> {
             playersBox.getChildren().clear();
@@ -328,14 +403,17 @@ public final class LanLobbyView extends BorderPane {
         box.setPadding(new Insets(48, 16, 16, 16));
 
         Label title = new Label(message);
-        title.getStyleClass().add("home-title");
+        title.getStyleClass().add("game-choice-title");
 
         Button back = new Button("返回大厅");
         back.getStyleClass().add("primary");
-        back.setOnAction(e -> shell.navigate("lan-lobby"));
+        back.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            shell.navigate("lan-lobby");
+        });
 
         box.getChildren().addAll(title, back);
-        setCenter(box);
+        contentArea.getChildren().setAll(box);
     }
 
     private void shutdownAll() {
