@@ -1,5 +1,23 @@
 package com.csu.pokergame.ui;
 
+import com.cards.ui.LoginView;
+import com.cards.ui.ProfileView;
+import com.cards.ui.SettingsView;
+import com.csu.pokergame.player.AccountService;
+import com.csu.pokergame.player.AchievementService;
+import com.csu.pokergame.player.CoinLogService;
+import com.csu.pokergame.player.CoinRechargeService;
+import com.csu.pokergame.player.CoinService;
+import com.csu.pokergame.player.GameRecordService;
+import com.csu.pokergame.player.InventoryService;
+import com.csu.pokergame.player.ItemUseService;
+import com.csu.pokergame.player.LeaderboardService;
+import com.csu.pokergame.player.PlayerGrowthService;
+import com.csu.pokergame.player.PlayerManager;
+import com.csu.pokergame.player.PlayerStatsService;
+import com.csu.pokergame.player.ShopService;
+import com.csu.pokergame.player.StatisticsService;
+import com.csu.pokergame.settings.SettingsService;
 import com.csu.pokergame.ui.scene.GameModeView;
 import com.csu.pokergame.ui.scene.HomeView;
 import com.csu.pokergame.ui.scene.LanLobbyView;
@@ -26,17 +44,49 @@ public final class RouteTable {
      * 安装所有静态路由。程序启动时由 Launcher 调用一次。
      */
     public static void install(AppShell shell) {
-        // ===== 加载/入口页（feat/loading 分支负责） =====
+        // ===== 登录 / 账号 =====
+        shell.register("login", () -> new LoginView(
+                AccountService.getInstance(),
+                () -> shell.navigate("home")));
+
+        // ===== 个人中心 / 设置中心 =====
+        shell.register("profile", () -> new ProfileView(
+                PlayerManager.getInstance(),
+                CoinService.getInstance(),
+                PlayerGrowthService.getInstance(),
+                PlayerStatsService.getInstance(),
+                AchievementService.getInstance(),
+                CoinRechargeService.getInstance(),
+                CoinLogService.getInstance(),
+                InventoryService.getInstance(),
+                ShopService.getInstance(),
+                ItemUseService.getInstance(),
+                GameRecordService.getInstance(),
+                LeaderboardService.getInstance(),
+                StatisticsService.getInstance(),
+                AccountService.getInstance(),
+                () -> shell.navigate("login"),
+                () -> shell.navigate("login"),
+                () -> shell.navigate("home")));
+
+        shell.register("settings", () -> new SettingsView(
+                SettingsService.getInstance(),
+                AccountService.getInstance(),
+                () -> shell.navigate("login"),
+                () -> shell.navigate("login"),
+                () -> shell.navigate("home")));
+
+        // ===== 加载/入口页 =====
         shell.register("home", () -> new HomeView(shell));
         shell.register("game-modes", () -> new GameModeView(shell));
         shell.register("local-select", () -> new LocalGameSelectView(shell));
         shell.register("rules", () -> new RulesView(shell));
 
-        // ===== 出牌/桌面页（feat/gameplay 分支负责） =====
+        // ===== 出牌/桌面页 =====
         shell.register("pdk", () -> new PdkTableView(shell));
         shell.register("liar", () -> new LiarTableView(shell));
 
-        // ===== 局域网大厅（feat/ai-network 分支负责） =====
+        // ===== 局域网大厅 =====
         shell.register("lan-lobby", () -> new LanLobbyView(shell));
 
         // 注：LanGameTableView 需要运行时参数（LanHost / LanClient），

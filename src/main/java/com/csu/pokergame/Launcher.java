@@ -23,7 +23,7 @@ public class Launcher extends Application {
         Scene scene = new Scene(new StackPane(), 1100, 720);
         AppShell shell = new AppShell(scene);
         RouteTable.install(shell);
-        shell.navigate("home");
+        shell.navigate("login");
         stage.setScene(scene);
         stage.show();
     }

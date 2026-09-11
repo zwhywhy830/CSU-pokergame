@@ -23,7 +23,7 @@ public final class GameModeView extends BorderPane {
         Button home = new Button("返回主页");
         home.setOnAction(e -> shell.navigate("home"));
         Button settings = new Button("设置");
-        settings.setOnAction(e -> shell.openSettings());
+        settings.setOnAction(e -> shell.navigate("settings"));
         Label title = new Label("选择游戏模式");
         title.getStyleClass().add("home-title");
         BorderPane topBar = new BorderPane();

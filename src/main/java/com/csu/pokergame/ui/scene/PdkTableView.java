@@ -149,8 +149,9 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void renderTable(PdkSnapshot snap) {
+        // PdkMove 不含出牌者信息，快照也未暴露 lastMover，仅展示牌面
         snap.lastMove().ifPresentOrElse(
-                move -> tableCards.setCards(move.cards(), name(move.player())),
+                move -> tableCards.setCards(move.cards(), null),
                 () -> tableCards.setCards(List.of(), null));
     }
 
