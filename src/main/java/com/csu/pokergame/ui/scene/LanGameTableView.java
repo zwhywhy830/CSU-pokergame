@@ -423,11 +423,16 @@ public final class LanGameTableView extends BorderPane {
     }
 
     private String name(PlayerId p) {
-        return switch (p) {
+        String base = switch (p) {
             case SEAT_1 -> "玩家 1";
             case SEAT_2 -> "玩家 2";
             case SEAT_3 -> "玩家 3";
             case SEAT_4 -> "玩家 4";
         };
+        // 主机视角：若该座位是机器人，加 [AI] 后缀
+        if (host != null && host.botSeats().contains(p)) {
+            return base + " [AI]";
+        }
+        return base;
     }
 }

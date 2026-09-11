@@ -4,8 +4,14 @@ import com.csu.pokergame.core.engine.GameCommand;
 import com.csu.pokergame.core.engine.GameEngine;
 import com.csu.pokergame.core.engine.GameSnapshot;
 import com.csu.pokergame.core.engine.PlayerId;
+import com.csu.pokergame.core.player.BotPolicy;
+import com.csu.pokergame.core.player.RuleBotController;
 import com.csu.pokergame.liarspoker.LiarEngine;
+import com.csu.pokergame.liarspoker.LiarRandomPolicy;
+import com.csu.pokergame.paodekuai.PdkBotPolicy;
 import com.csu.pokergame.paodekuai.PdkEngine;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -19,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,6 +60,36 @@ public final class LanHost {
     /** 已接入客户端,按座位索引。null 表示座位空闲。访问需持锁(this)。 */
     private final Map<PlayerId, ClientConn> clients = new LinkedHashMap<>();
     private final Map<PlayerId, String> displayNames = new EnumMap<>(PlayerId.class);
+
+    /** 机器人座位 → 控制器。访问需持锁(this)。机器人不占 TCP 连接，由主机本地驱动。 */
+    private final Map<PlayerId, RuleBotController> bots = new EnumMap<>(PlayerId.class);
+    /** 机器人思考延迟下限/上限（毫秒）。 */
+    private static final int BOT_DELAY_MIN_MS = 500;
+    private static final int BOT_DELAY_MAX_MS = 1500;
+    private final Random botDelayRng = new Random();
+
+    /**
+     * 机器人任务调度器。默认实现用 JavaFX {@link PauseTransition}（生产环境）。
+     * 测试环境可注入同步实现（直接 {@code r.run()}）以避免启动 JavaFX Toolkit。
+     */
+    @FunctionalInterface
+    public interface BotScheduler {
+        void schedule(Runnable task, int delayMs);
+    }
+
+    private BotScheduler botScheduler = this::defaultScheduleBot;
+
+    /** 默认调度器：JavaFX PauseTransition，必须在 JavaFX Application Thread 调用。 */
+    private void defaultScheduleBot(Runnable task, int delayMs) {
+        PauseTransition pause = new PauseTransition(Duration.millis(delayMs));
+        pause.setOnFinished(e -> task.run());
+        pause.play();
+    }
+
+    /** 注入调度器（主要供测试用）。必须在 startGame 之前调用。 */
+    public void setBotScheduler(BotScheduler scheduler) {
+        this.botScheduler = Objects.requireNonNull(scheduler);
+    }
 
     private GameEngine engine;
     private final AtomicBoolean gameStarted = new AtomicBoolean(false);
@@ -117,11 +154,13 @@ public final class LanHost {
     public synchronized RoomSnapshot currentRoom() {
         List<RoomPlayer> players = new ArrayList<>();
         for (PlayerId seat : orderedSeats()) {
-            boolean connected = seat == PlayerId.SEAT_1 || clients.get(seat) != null;
-            players.add(new RoomPlayer(seat, displayNames.get(seat), seat == PlayerId.SEAT_1, connected));
+            boolean isBot = bots.containsKey(seat);
+            boolean connected = seat == PlayerId.SEAT_1 || clients.get(seat) != null || isBot;
+            String name = displayNames.get(seat);
+            players.add(new RoomPlayer(seat, name, seat == PlayerId.SEAT_1, connected, isBot));
         }
-        int connectedCount = (int) players.stream().filter(RoomPlayer::connected).count();
-        return new RoomSnapshot(players, connectedCount >= gameType.requiredPlayers(), gameType);
+        int presentCount = (int) players.stream().filter(RoomPlayer::connected).count();
+        return new RoomSnapshot(players, presentCount >= gameType.requiredPlayers(), gameType);
     }
 
     /** 调用者应在 JavaFX 线程调用,广播房间状态给所有客户端。 */
@@ -134,15 +173,15 @@ public final class LanHost {
         broadcast(msg);
     }
 
-    /** 开始对局。人数未齐时抛 IllegalStateException。 */
+    /** 开始对局。真人数 + 机器人数 < requiredPlayers 时抛 IllegalStateException。 */
     public synchronized void startGame() {
         if (gameStarted.get()) {
             return;
         }
         RoomSnapshot room = currentRoom();
-        int connected = (int) room.players().stream().filter(RoomPlayer::connected).count();
-        if (connected < gameType.requiredPlayers()) {
-            throw new IllegalStateException("人数未齐 (" + connected + "/" + gameType.requiredPlayers() + ")");
+        int present = (int) room.players().stream().filter(RoomPlayer::connected).count();
+        if (present < gameType.requiredPlayers()) {
+            throw new IllegalStateException("人数未齐 (" + present + "/" + gameType.requiredPlayers() + ")");
         }
         long seed = System.currentTimeMillis();
         engine = newEngine(gameType, seed);
@@ -165,16 +204,20 @@ public final class LanHost {
         if (onStartGame != null) {
             onStartGame.run();
         }
+        // 启动机器人循环（若首回合是机器人）
+        maybeScheduleBotTurn();
     }
 
     /** 主机提交自己的命令(在 JavaFX 线程调用)。 */
     public synchronized void submitLocalCommand(GameCommand command) {
         applyCommand(PlayerId.SEAT_1, command);
+        maybeScheduleBotTurn();
     }
 
     /** 收到客户端命令(由 ioExecutor 通过 onCommand 回调驱动,UI 应在 JavaFX 线程处理后再 apply)。 */
     public synchronized void handleRemoteCommand(PlayerId seat, GameCommand command) {
         applyCommand(seat, command);
+        maybeScheduleBotTurn();
     }
 
     private void applyCommand(PlayerId seat, GameCommand command) {
@@ -229,6 +272,107 @@ public final class LanHost {
         }
     }
 
+    // ------ 机器人管理 ------
+
+    /**
+     * 给指定座位挂机器人。必须在未开局时调用。
+     * 约束：seat 非 SEAT_1、未被真人/机器人占用、当前机器人数 < requiredPlayers - 1。
+     * 成功后更新 displayName、广播 RoomSnapshot。
+     */
+    public synchronized void addBot(PlayerId seat) {
+        if (gameStarted.get()) {
+            throw new IllegalStateException("开局后不能加机器人");
+        }
+        if (seat == PlayerId.SEAT_1) {
+            throw new IllegalArgumentException("主机座位不能加机器人");
+        }
+        if (!orderedSeats().contains(seat)) {
+            throw new IllegalArgumentException("非法座位:" + seat);
+        }
+        if (clients.get(seat) != null) {
+            throw new IllegalStateException("座位已被真人占用:" + seat);
+        }
+        if (bots.containsKey(seat)) {
+            throw new IllegalStateException("座位已有机器人:" + seat);
+        }
+        if (bots.size() >= gameType.requiredPlayers() - 1) {
+            throw new IllegalStateException("机器人数已达上限 (" + (gameType.requiredPlayers() - 1) + ")");
+        }
+        RuleBotController controller = new RuleBotController(createBotPolicy(gameType));
+        bots.put(seat, controller);
+        displayNames.put(seat, "机器人 " + (seatIndex(seat) + 1));
+        broadcastRoom();
+    }
+
+    /** 移除指定座位的机器人。未开局时调用。 */
+    public synchronized void removeBot(PlayerId seat) {
+        if (gameStarted.get()) {
+            throw new IllegalStateException("开局后不能移除机器人");
+        }
+        if (!bots.containsKey(seat)) {
+            return;
+        }
+        bots.remove(seat);
+        displayNames.remove(seat);
+        broadcastRoom();
+    }
+
+    /** 当前机器人座位集合（不可变快照）。 */
+    public synchronized java.util.Set<PlayerId> botSeats() {
+        return java.util.Collections.unmodifiableSet(new java.util.LinkedHashSet<>(bots.keySet()));
+    }
+
+    /** 构造机器人策略：跑得快用 PdkBotPolicy，骗子酒馆用 LiarRandomPolicy。 */
+    private BotPolicy createBotPolicy(GameType type) {
+        return switch (type) {
+            case PAO_DE_KUAI -> new PdkBotPolicy();
+            case LIARS_POKER -> new LiarRandomPolicy(new Random());
+        };
+    }
+
+    /**
+     * 若当前引擎回合是机器人座位，安排一次延迟后的机器人出牌。
+     * 通过 while 循环跳过连续机器人回合的链式递归（同步调度器场景）；
+     * 默认 JavaFX 调度器异步触发，每轮 apply 后会再次调用本方法推进。
+     * 必须在 JavaFX 线程被调用（startGame/submitLocalCommand/handleRemoteCommand 均满足）。
+     */
+    private void maybeScheduleBotTurn() {
+        while (true) {
+            if (engine == null || ended.get()) {
+                return;
+            }
+            GameSnapshot snap = engine.snapshotFor(PlayerId.SEAT_1);
+            PlayerId current = snap.currentPlayer();
+            if (current == null) {
+                return;
+            }
+            RuleBotController bot = bots.get(current);
+            if (bot == null) {
+                return; // 当前是真人，等用户输入
+            }
+            final PlayerId botSeat = current;
+            int delay = BOT_DELAY_MIN_MS + botDelayRng.nextInt(BOT_DELAY_MAX_MS - BOT_DELAY_MIN_MS);
+            // 调度器决定同步还是异步执行本轮机器人出牌
+            botScheduler.schedule(() -> {
+                GameSnapshot botSnap;
+                List<GameCommand> legal;
+                synchronized (this) {
+                    if (engine == null || ended.get()) {
+                        return;
+                    }
+                    botSnap = engine.snapshotFor(botSeat);
+                    legal = engine.legalCommands(botSeat);
+                }
+                // choose 立即返回（RuleBotController 同步决策）
+                GameCommand cmd = bot.choose(botSnap, legal).join();
+                applyCommand(botSeat, cmd);
+                maybeScheduleBotTurn();
+            }, delay);
+            // 异步调度器：return 等回调；同步调度器：回调已执行完且若 still 同步则会再次进入 while
+            return;
+        }
+    }
+
     public void shutdown() {
         endGame("HOST_SHUTDOWN");
         acceptExecutor.shutdownNow();
@@ -236,8 +380,12 @@ public final class LanHost {
         try {
             serverSocket.close();
         } catch (IOException ignored) {}
-        // 关闭所有客户端 socket
-        for (ClientConn c : clients.values()) {
+        // 关闭所有客户端 socket（先复制列表，避免 socket.close 触发 handleDisconnect 并发修改 clients）
+        List<ClientConn> snapshot;
+        synchronized (this) {
+            snapshot = new ArrayList<>(clients.values());
+        }
+        for (ClientConn c : snapshot) {
             if (c != null) {
                 try { c.socket.close(); } catch (IOException ignored) {}
             }
@@ -271,7 +419,7 @@ public final class LanHost {
 
             // 读首条消息,必须是 JOIN
             WireMessage first = readMessage(in);
-            if (!(first instanceof WireMessage.Join)) {
+            if (!(first instanceof WireMessage.Join join)) {
                 send(out, new WireMessage.Error("EXPECTED_JOIN"));
                 socket.close();
                 return;
@@ -279,10 +427,27 @@ public final class LanHost {
 
             // 分配座位
             synchronized (this) {
-                PlayerId seat = nextFreeSeat();
-                if (seat == null) {
+                PlayerId requested = join.requestedSeat();
+                PlayerId seat = null;
+                String errorCode = null;
+                if (requested == null) {
+                    // 兼容旧客户端：自动分配
+                    seat = nextFreeSeat();
+                    if (seat == null) {
+                        errorCode = "ROOM_FULL";
+                    }
+                } else if (requested == PlayerId.SEAT_1) {
+                    errorCode = "SEAT_RESERVED_HOST";
+                } else if (!orderedSeats().contains(requested)) {
+                    errorCode = "SEAT_INVALID";
+                } else if (clients.get(requested) != null || bots.containsKey(requested)) {
+                    errorCode = "SEAT_TAKEN";
+                } else {
+                    seat = requested;
+                }
+                if (errorCode != null) {
                     try {
-                        send(out, new WireMessage.Error("ROOM_FULL"));
+                        send(out, new WireMessage.Error(errorCode));
                     } catch (IOException ignored) {}
                     socket.close();
                     return;
@@ -386,6 +551,7 @@ public final class LanHost {
     private PlayerId nextFreeSeat() {
         for (PlayerId seat : orderedSeats()) {
             if (seat == PlayerId.SEAT_1) continue; // 主机
+            if (bots.containsKey(seat)) continue;    // 机器人占用
             if (!clients.containsKey(seat) || clients.get(seat) == null) {
                 return seat;
             }

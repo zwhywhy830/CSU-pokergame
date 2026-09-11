@@ -65,14 +65,24 @@ public final class LanClient {
     public void setOnEnded(Consumer<String> cb) { this.onEnded = cb; }
     public void setOnError(Consumer<String> cb) { this.onError = cb; }
 
-    /** 连接并发送 JOIN。失败时回调 onError 并关闭。 */
+    /** 连接并发送 JOIN（不指定座位，由主机自动分配；兼容旧版）。 */
     public void join() {
+        join(null);
+    }
+
+    /**
+     * 连接并请求指定座位。
+     *
+     * @param requestedSeat 请求的座位；null 表示任意空位（让主机自动分配）
+     *                      非 null 时主机校验，冲突会回调 onError(SEAT_TAKEN / SEAT_RESERVED_HOST / SEAT_INVALID)
+     */
+    public void join(PlayerId requestedSeat) {
         ioExecutor.submit(() -> {
             try {
                 socket = new Socket(hostIp, port);
                 in = new DataInputStream(socket.getInputStream());
                 out = new DataOutputStream(socket.getOutputStream());
-                send(new WireMessage.Join());
+                send(new WireMessage.Join(requestedSeat));
                 joined.set(true);
                 // 进入消息循环
                 receiveLoop();
