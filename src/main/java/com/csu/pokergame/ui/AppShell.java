@@ -1,5 +1,6 @@
 package com.csu.pokergame.ui;
 
+import com.cards.ui.animation.SceneTransition;
 import com.csu.pokergame.ui.scene.SettingsOverlay;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -48,6 +49,32 @@ public final class AppShell {
             throw new IllegalArgumentException("未注册的路由: " + name);
         }
         root.getChildren().setAll(factory.get());
+    }
+
+    /**
+     * 带转场动画的路由切换：在 root StackPane 上叠 Overlay 演完转场。
+     *
+     * @param route 目标路由名
+     * @param type 转场类型（FADE/ZOOM/ENTER_GAME/RETURN_LOBBY/OPEN_PROFILE/WIN_TO_LOBBY/NONE）
+     */
+    public void transitionTo(String route, SceneTransition.Type type) {
+        SceneTransition.transition(this, route, type);
+    }
+
+    /**
+     * 带转场动画与结束回调的路由切换。
+     *
+     * @param route           目标路由名
+     * @param type            转场类型
+     * @param afterTransition 转场结束回调（可 null）
+     */
+    public void transitionTo(String route, SceneTransition.Type type, Runnable afterTransition) {
+        SceneTransition.transition(this, route, type, afterTransition);
+    }
+
+    /** 暴露根 StackPane，供 SceneTransition 在其上叠 Overlay。 */
+    public StackPane getRoot() {
+        return root;
     }
 
     /** 在当前页面之上叠加设置弹层（不破坏底层页面状态）。 */
