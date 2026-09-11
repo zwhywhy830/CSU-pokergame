@@ -1,13 +1,18 @@
 package com.csu.pokergame.ui.scene;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.liar.LiarActionBar;
+import com.cards.ui.liar.LiarClaimPanel;
+import com.cards.ui.liar.LiarHandView;
+import com.cards.ui.liar.LiarPlayerSeat;
+import com.cards.ui.liar.LiarRiskIndicator;
 import com.csu.pokergame.core.card.Card;
 import com.csu.pokergame.core.engine.GameCommand;
 import com.csu.pokergame.core.engine.GameSnapshot;
@@ -25,50 +30,49 @@ import com.csu.pokergame.liarspoker.LiarResolution;
 import com.csu.pokergame.liarspoker.LiarSnapshot;
 import com.csu.pokergame.liarspoker.TrustDeclaration;
 import com.csu.pokergame.ui.AppShell;
-import com.csu.pokergame.ui.component.CardView;
 
 import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.OverrunStyle;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 /**
  * 骗子酒馆游戏桌（本地人机：SEAT_1 为玩家，SEAT_2/3/4 为机器人）。
- * 四个方位布局：本地玩家在底部，AI1/AI2/AI3 在顶部左/中/右三个固定位置，
- * 中央为桌面与日志，避免使用浮层卡片导致位置漂移。
+ *
+ * <p>阶段 10：用 deckapp-ui 的 Liar 组件（LiarTableView 容器 / LiarPlayerSeat /
+ * LiarClaimPanel / LiarRiskIndicator / LiarHandView / LiarActionBar）替换原先
+ * 简陋的 Label + CardView 实现，引擎交互逻辑（LiarEngine / LiarSnapshot /
+ * DeclareLiarCards / bot 调度）保持不变。
+ *
+ * <p>座位映射（与容器 {@code getSeat(index)} 一致）：
+ * index 0 = SEAT_1（本人，底部），1 = SEAT_2（AI1，顶部），
+ * 2 = SEAT_3（AI2，左侧），3 = SEAT_4（AI3，右侧）。
  */
 public final class LiarTableView extends BorderPane {
 
     private static final PlayerId LOCAL = PlayerId.SEAT_1;
 
+    /** 座位顺序与容器 index 一一对应。 */
+    private static final PlayerId[] SEAT_ORDER = {
+            PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4
+    };
+
     private final AppShell shell;
     private final LiarEngine engine;
     private final Map<PlayerId, RuleBotController> bots;
-    private final Set<Card> selected = new LinkedHashSet<>();
 
-    private final Label statusLabel = new Label();
-    private final Label targetLabel = new Label();
-    private final Label hintLabel = new Label();
-    private final HBox seat1Info = new HBox(8);
-    private final HBox seat2Info = new HBox(8);
-    private final HBox seat3Info = new HBox(8);
-    private final HBox seat4Info = new HBox(8);
-    private final HBox tableCards = new HBox(8);
-    private final HBox handBox = new HBox(8);
-    private final ListView<String> log = new ListView<>();
-    private final Button declareButton = new Button("宣告");
-    private final Button trustButton = new Button("相信");
-    private final Button challengeButton = new Button("质疑");
+    /** 本人手牌选中下标集合（与 LiarHandView 内部选中态同步）。 */
+    private final Set<Integer> selectedIndices = new LinkedHashSet<>();
+
+    /** deckapp-ui 骗子酒馆容器（包名同类名，用全限定名区分）。 */
+    private final com.cards.ui.liar.LiarTableView liarView =
+            new com.cards.ui.liar.LiarTableView();
 
     public LiarTableView(AppShell shell) {
         this.shell = shell;
@@ -81,333 +85,210 @@ public final class LiarTableView extends BorderPane {
                 PlayerId.SEAT_4, new RuleBotController(new LiarRandomPolicy(new Random())));
 
         buildLayout();
+        wireActions();
         refresh();
     }
 
     private void buildLayout() {
-        setPadding(new Insets(16));
-        setStyle("-fx-background-color: -color-table;");
+        // 背景层
+        BackgroundManager.Background bg = BackgroundManager.createGameBackground();
 
-        // 顶部：返回 | 目标点数 | 设置
-        Button back = new Button("返回游戏选择");
+        // 顶部：返回 + 设置
+        Button back = new Button("返回");
         back.setOnAction(e -> shell.navigate("game-modes"));
         Button settings = new Button("设置");
-        settings.setOnAction(e -> showSettings());
-        targetLabel.getStyleClass().add("target-label");
-        HBox topCenter = new HBox(16, targetLabel);
-        topCenter.setAlignment(Pos.CENTER);
-        BorderPane topBar = new BorderPane();
-        topBar.setLeft(back);
-        topBar.setCenter(topCenter);
-        topBar.setRight(settings);
-        topBar.setPadding(new Insets(0, 0, 12, 0));
-        setTop(topBar);
+        settings.setOnAction(e -> shell.openSettings());
+        HBox topBar = new HBox(12, back, settings);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setPadding(new Insets(8, 12, 8, 12));
 
-        // 上方 AI 行：AI1 / AI2 / AI3 三个固定卡片横排
-        HBox aiRow = new HBox(24);
-        aiRow.setAlignment(Pos.CENTER);
-        aiRow.setPadding(new Insets(8, 8, 12, 8));
-        aiRow.getChildren().addAll(
-                seatCard(PlayerId.SEAT_2, seat2Info),
-                seatCard(PlayerId.SEAT_3, seat3Info),
-                seatCard(PlayerId.SEAT_4, seat4Info));
-
-        // 中央：状态提示 + 桌面 + 操作引导 + 日志
-        statusLabel.getStyleClass().add("status-label");
-        statusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
-        statusLabel.setMaxWidth(Double.MAX_VALUE);
-        statusLabel.setAlignment(Pos.CENTER);
-
-        tableCards.setAlignment(Pos.CENTER);
-        Label tableLabel = new Label("本次宣告");
-        tableLabel.getStyleClass().add("section-label");
-        VBox tableArea = new VBox(6, tableLabel, tableCards);
-        tableArea.setAlignment(Pos.CENTER);
-        tableArea.getStyleClass().add("table-area");
-
-        hintLabel.getStyleClass().add("hint-label");
-        hintLabel.setWrapText(true);
-        hintLabel.setAlignment(Pos.CENTER);
-        hintLabel.setMaxWidth(Double.MAX_VALUE);
-
-        log.getStyleClass().add("log-view");
-        log.setPrefHeight(180);
-        VBox logBox = new VBox(6, new Label("事件日志"), log);
-        logBox.getStyleClass().add("log-box");
-
-        VBox center = new VBox(12, aiRow, statusLabel, tableArea, hintLabel, logBox);
-        center.setAlignment(Pos.TOP_CENTER);
-        ScrollPane centerScroll = new ScrollPane(center);
-        centerScroll.setFitToWidth(true);
-        centerScroll.setFitToHeight(true);
-        centerScroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-        setCenter(centerScroll);
-
-        // 底部：本地玩家信息 + 手牌 + 操作栏
-        VBox bottom = new VBox(10);
-        bottom.setPadding(new Insets(8, 0, 0, 0));
-
-        HBox localInfoRow = new HBox(12);
-        localInfoRow.setAlignment(Pos.CENTER);
-        localInfoRow.getChildren().add(seatCard(PlayerId.SEAT_1, seat1Info));
-
-        handBox.setAlignment(Pos.CENTER);
-        handBox.getStyleClass().add("hand-box");
-        handBox.setMinHeight(Region.USE_PREF_SIZE);
-
-        HBox actions = new HBox(12);
-        actions.setAlignment(Pos.CENTER);
-        declareButton.getStyleClass().addAll("primary", "action-button");
-        declareButton.setOnAction(e -> declare());
-        trustButton.getStyleClass().add("action-button");
-        trustButton.setOnAction(e -> trust());
-        challengeButton.getStyleClass().addAll("danger", "action-button");
-        challengeButton.setOnAction(e -> challenge());
-        actions.getChildren().addAll(declareButton, trustButton, challengeButton);
-
-        bottom.getChildren().addAll(localInfoRow, handBox, actions);
-        setBottom(bottom);
+        // 组装：背景 + 顶栏 + 骗子酒馆容器
+        StackPane root = new StackPane(bg.root(), new BorderPane(topBar, liarView, null, null, null));
+        setCenter(root);
     }
 
-    /** 构造一个座位信息卡片：名称 + 存活状态 + 手枪指示器。 */
-    private VBox seatCard(PlayerId seat, HBox gunBox) {
-        VBox card = new VBox(6);
-        card.getStyleClass().add("seat-card");
-        card.setAlignment(Pos.CENTER);
+    private void wireActions() {
+        LiarHandView hand = liarView.getHandView();
+        hand.setMaxSelect(3);
+        hand.setOnSelectionChange(sel -> {
+            selectedIndices.clear();
+            selectedIndices.addAll(sel);
+            refreshActions();
+        });
 
-        Label name = new Label(name(seat));
-        name.getStyleClass().add("seat-name");
-        Label status = new Label();
-        status.getStyleClass().add("seat-status");
-
-        gunBox.setAlignment(Pos.CENTER);
-        gunBox.getStyleClass().add("gun-row");
-        gunBox.getChildren().clear();
-        for (int i = 0; i < 6; i++) {
-            Label dot = new Label("•");
-            dot.getStyleClass().add("chamber");
-            gunBox.getChildren().add(dot);
-        }
-
-        card.getChildren().addAll(name, status, gunBox);
-        return card;
-    }
-
-    private void showSettings() {
-        shell.openSettings();
+        LiarActionBar bar = liarView.getActionBar();
+        bar.getDeclareButton().setOnAction(e -> declare());
+        bar.getContinueButton().setOnAction(e -> trust());
+        bar.getChallengeButton().setOnAction(e -> challenge());
     }
 
     private void refresh() {
         LiarSnapshot snap = (LiarSnapshot) engine.snapshotFor(LOCAL);
-        renderStatus(snap);
-        renderTarget(snap);
+
+        // 顶部：阶段 / 存活 / 目标点数
+        liarView.setPhaseText(phaseName(snap.liarPhase()));
+        liarView.setAliveText(snap.alivePlayers().size());
+        liarView.setTipText("目标点数：" + snap.targetRank().label());
+
+        // 四家座位：生命值 + 状态
         renderSeats(snap);
-        renderTable(snap);
-        renderLog(snap);
-        renderHand(snap);
-        renderHint(snap);
+
+        // 中央声明卡 + 顶部紧凑声明
+        renderClaim(snap);
+
+        // 怀疑度（纯展示，按已宣告张数粗略估算）
+        LiarRiskIndicator risk = liarView.getRiskIndicator();
+        risk.setValue(snap.pendingDeclaredCount() > 0
+                ? Math.min(1.0, snap.pendingDeclaredCount() / 3.0 * 0.7 + 0.1)
+                : 0.0);
+
+        // 本人手牌
+        LiarHandView hand = liarView.getHandView();
+        hand.setCards(snap.myHand());
+        selectedIndices.removeIf(i -> i >= snap.myHand().size());
+        hand.refreshSelection();
+
+        // 日志（最新在上，与原实现一致）
+        List<String> events = new ArrayList<>(snap.publicEvents());
+        java.util.Collections.reverse(events);
+        liarView.setLogEntries(events);
 
         if (snap.winner().isPresent()) {
             renderResult(snap);
             return;
         }
 
-        switch (snap.liarPhase()) {
-            case DECLARE -> {
-                if (snap.currentPlayer() == LOCAL) {
-                    declareButton.setVisible(true);
-                    trustButton.setVisible(false);
-                    challengeButton.setVisible(false);
-                    boolean valid = !selected.isEmpty() && selected.size() <= 3;
-                    declareButton.setDisable(!valid);
-                } else {
-                    setBotWaiting();
-                }
-            }
-            case RESPOND -> {
-                if (snap.currentPlayer() == LOCAL) {
-                    declareButton.setVisible(false);
-                    trustButton.setVisible(true);
-                    challengeButton.setVisible(true);
-                    trustButton.setDisable(false);
-                    challengeButton.setDisable(false);
-                } else {
-                    setBotWaiting();
-                }
-            }
-            case RESOLVE, FINISHED -> setBotWaiting();
-        }
-    }
-
-    private void setBotWaiting() {
-        declareButton.setDisable(true);
-        trustButton.setDisable(true);
-        challengeButton.setDisable(true);
-        scheduleBotTurn(engine.snapshotFor(LOCAL).currentPlayer());
-    }
-
-    private void renderStatus(LiarSnapshot snap) {
-        String text;
-        if (snap.lastResolution().isPresent() && snap.liarPhase() != LiarPhase.FINISHED) {
-            LiarResolution res = snap.lastResolution().get();
-            text = (res.truthful() ? "宣告属实，" : "宣告被拆穿，")
-                    + name(res.shooter()) + " 扣扳机"
-                    + (res.hit() ? "，中弹淘汰" : "，空仓存活");
-        } else if (snap.liarPhase() == LiarPhase.DECLARE) {
-            text = snap.currentPlayer() == LOCAL
-                    ? "轮到你宣告"
-                    : "等待 " + name(snap.currentPlayer()) + " 宣告…";
-        } else if (snap.liarPhase() == LiarPhase.RESPOND) {
-            text = snap.currentPlayer() == LOCAL
-                    ? "轮到你回应"
-                    : "等待 " + name(snap.currentPlayer()) + " 回应…";
-        } else {
-            text = "对局结束";
-        }
-        statusLabel.setText(text);
-    }
-
-    /** 渲染操作引导提示，根据当前阶段动态显示玩家该做什么。 */
-    private void renderHint(LiarSnapshot snap) {
-        String hint;
-        if (snap.winner().isPresent()) {
-            hint = "";
-        } else if (snap.liarPhase() == LiarPhase.DECLARE && snap.currentPlayer() == LOCAL) {
-            int n = selected.size();
-            if (n == 0) {
-                hint = "请选择 1–3 张牌后点击「宣告」";
-            } else if (n <= 3) {
-                hint = "已选 " + n + " 张 · 点击「宣告」提交";
-            } else {
-                hint = "已选 " + n + " 张 · 最多只能选 3 张";
-            }
-        } else if (snap.liarPhase() == LiarPhase.RESPOND && snap.currentPlayer() == LOCAL) {
-            hint = "相信：不质疑，轮到你出牌 ｜ 质疑：怀疑对方假宣告";
-        } else {
-            hint = "";
-        }
-        hintLabel.setText(hint);
-        hintLabel.setVisible(!hint.isEmpty());
-        hintLabel.setManaged(!hint.isEmpty());
-    }
-
-    private void renderTarget(LiarSnapshot snap) {
-        targetLabel.setText("目标点数：" + snap.targetRank().label());
+        refreshActions();
+        scheduleBotIfNeeded(snap);
     }
 
     private void renderSeats(LiarSnapshot snap) {
-        renderSeat(seat1Info, PlayerId.SEAT_1, snap);
-        renderSeat(seat2Info, PlayerId.SEAT_2, snap);
-        renderSeat(seat3Info, PlayerId.SEAT_3, snap);
-        renderSeat(seat4Info, PlayerId.SEAT_4, snap);
+        for (int i = 0; i < SEAT_ORDER.length; i++) {
+            PlayerId p = SEAT_ORDER[i];
+            LiarPlayerSeat seat = liarView.getSeat(i);
+            if (seat == null) {
+                continue;
+            }
+            seat.setPlayerName(name(p));
+
+            GunState gun = snap.guns().get(p);
+            int pulled = gun == null ? 0 : gun.shotsFired();
+            // 生命值按「剩余机会」折算成 0~3 颗心
+            seat.setLife(Math.max(0, 3 - pulled / 2));
+
+            if (snap.eliminatedPlayers().contains(p)) {
+                seat.setDead();
+            } else if (snap.winner().isPresent()) {
+                seat.setNormal();
+                if (snap.winner().get() == p) {
+                    seat.playWinBurst();
+                }
+            } else if (p == snap.currentPlayer()) {
+                seat.setThinking();
+            } else {
+                seat.setNormal();
+            }
+        }
     }
 
-    private void renderSeat(HBox gunBox, PlayerId seat, LiarSnapshot snap) {
-        VBox card = (VBox) gunBox.getParent();
-        Label statusLabel = (Label) card.getChildren().get(1);
-        HBox dots = (HBox) card.getChildren().get(2);
+    private void renderClaim(LiarSnapshot snap) {
+        LiarClaimPanel center = liarView.getClaimPanel();
+        LiarClaimPanel header = liarView.getHeaderClaim();
 
-        boolean alive = snap.alivePlayers().contains(seat);
-        GunState gun = snap.guns().get(seat);
-        if (gun == null) {
+        String declarerName = snap.declarer() == null ? "" : name(snap.declarer());
+        String claimText = snap.declarer() == null
+                ? "等待首位宣告者"
+                : snap.pendingDeclaredCount() + " 张 " + snap.targetRank().label();
+
+        center.setDeclarer(declarerName);
+        center.setClaim(claimText);
+        center.setCredibilityUnknown();
+
+        header.setDeclarer(declarerName);
+        header.setClaim(claimText);
+        header.setCredibilityUnknown();
+    }
+
+    private void refreshActions() {
+        LiarSnapshot snap = (LiarSnapshot) engine.snapshotFor(LOCAL);
+        LiarActionBar bar = liarView.getActionBar();
+        LiarHandView hand = liarView.getHandView();
+
+        boolean myTurn = snap.currentPlayer() == LOCAL;
+        // 手牌只在「本人 · 宣告阶段」可点击选牌
+        hand.setInteractive(myTurn && snap.liarPhase() == LiarPhase.DECLARE);
+
+        if (!myTurn) {
+            bar.setAllEnabled(false);
             return;
         }
-        statusLabel.setText(alive
-                ? "存活 · 已扣 " + gun.shotsFired() + "/6"
-                : "已淘汰");
-
-        for (int i = 0; i < 6; i++) {
-            Label dot = (Label) dots.getChildren().get(i);
-            dot.getStyleClass().setAll("chamber");
-            if (!alive) {
-                dot.getStyleClass().add("chamber-dead");
-            } else if (i < gun.shotsFired()) {
-                dot.getStyleClass().add("chamber-fired");
-            }
-        }
-
-        card.getStyleClass().setAll("seat-card");
-        if (!alive) {
-            card.getStyleClass().add("seat-dead");
-        } else if (seat == snap.currentPlayer()) {
-            card.getStyleClass().add("seat-active");
+        if (snap.liarPhase() == LiarPhase.DECLARE) {
+            bar.setDeclareEnabled(!selectedCards(snap).isEmpty());
+            bar.setContinueEnabled(false);
+            bar.setChallengeEnabled(false);
+        } else if (snap.liarPhase() == LiarPhase.RESPOND) {
+            bar.setDeclareEnabled(false);
+            bar.setContinueEnabled(true);
+            bar.setChallengeEnabled(true);
+        } else {
+            bar.setAllEnabled(false);
         }
     }
 
-    private void renderTable(LiarSnapshot snap) {
-        tableCards.getChildren().clear();
-        snap.lastResolution().ifPresent(res -> {
-            for (Card c : res.actualCards()) {
-                CardView cv = new CardView(c);
-                cv.setDisable(true);
-                tableCards.getChildren().add(cv);
-            }
-        });
-        if (tableCards.getChildren().isEmpty() && snap.pendingDeclaredCount() > 0) {
-            for (int i = 0; i < snap.pendingDeclaredCount(); i++) {
-                Label back = new Label("?");
-                back.getStyleClass().add("card-back");
-                tableCards.getChildren().add(back);
+    /** 把选中的手牌下标映射为实际牌（顺序与快照手牌一致）。 */
+    private List<Card> selectedCards(LiarSnapshot snap) {
+        List<Card> hand = snap.myHand();
+        List<Card> picked = new ArrayList<>();
+        for (int i : selectedIndices) {
+            if (i >= 0 && i < hand.size()) {
+                picked.add(hand.get(i));
             }
         }
-    }
-
-    private void renderLog(LiarSnapshot snap) {
-        List<String> events = snap.publicEvents();
-        List<String> reversed = new ArrayList<>(events);
-        java.util.Collections.reverse(reversed);
-        log.getItems().setAll(reversed);
-    }
-
-    private void renderHand(LiarSnapshot snap) {
-        handBox.getChildren().clear();
-        List<Card> sorted = snap.myHand().stream()
-                .sorted(Comparator.comparingInt(c -> c.rank().comparisonValue()))
-                .toList();
-        for (Card card : sorted) {
-            CardView cv = new CardView(card);
-            cv.setSelected(selected.contains(card));
-            cv.setOnAction(e -> {
-                if (selected.contains(card)) {
-                    selected.remove(card);
-                } else {
-                    selected.add(card);
-                }
-                refresh();
-            });
-            handBox.getChildren().add(cv);
-        }
+        return picked;
     }
 
     private void declare() {
-        if (selected.isEmpty() || selected.size() > 3) {
+        LiarSnapshot snap = (LiarSnapshot) engine.snapshotFor(LOCAL);
+        List<Card> picked = selectedCards(snap);
+        if (picked.isEmpty() || picked.size() > 3) {
             return;
         }
-        engine.apply(new DeclareLiarCards(List.copyOf(selected)));
-        selected.clear();
+        engine.apply(new DeclareLiarCards(picked));
+        selectedIndices.clear();
+        liarView.getHandView().clearSelection();
+        liarView.getClaimPanel().playClaimIn();
         refresh();
     }
 
     private void trust() {
         engine.apply(new TrustDeclaration());
+        selectedIndices.clear();
+        liarView.getHandView().clearSelection();
         refresh();
     }
 
     private void challenge() {
         engine.apply(new ChallengeDeclaration());
+        selectedIndices.clear();
+        liarView.getHandView().clearSelection();
+        liarView.playChallengeEffect();
         refresh();
     }
 
-    private void scheduleBotTurn(PlayerId bot) {
+    private void scheduleBotIfNeeded(LiarSnapshot snap) {
+        if (snap.currentPlayer() == LOCAL) {
+            return;
+        }
+        PlayerId bot = snap.currentPlayer();
         PauseTransition pause = new PauseTransition(Duration.millis(600));
         pause.setOnFinished(e -> {
-            GameSnapshot snap = engine.snapshotFor(bot);
+            GameSnapshot botSnap = engine.snapshotFor(bot);
             List<GameCommand> legal = engine.legalCommands(bot);
             if (legal.isEmpty()) {
                 refresh();
                 return;
             }
-            BotDecision decision = bots.get(bot).decide(snap, legal);
+            BotDecision decision = bots.get(bot).decide(botSnap, legal);
             engine.apply(decision.command());
             refresh();
         });
@@ -415,13 +296,19 @@ public final class LiarTableView extends BorderPane {
     }
 
     private void renderResult(LiarSnapshot snap) {
+        boolean localWon = snap.winner().orElseThrow() == LOCAL;
+        if (localWon) {
+            liarView.playVictoryGlow();
+        } else {
+            liarView.playDefeatEffect();
+        }
+
         StackPane overlay = new StackPane();
         overlay.getStyleClass().add("result-overlay");
         VBox box = new VBox(16);
         box.setAlignment(Pos.CENTER);
         box.getStyleClass().add("result-box");
 
-        boolean localWon = snap.winner().orElseThrow() == LOCAL;
         Label title = new Label(localWon ? "你赢了！" : "你输了！");
         title.getStyleClass().add(localWon ? "result-title-win" : "result-title-lose");
 
@@ -448,7 +335,18 @@ public final class LiarTableView extends BorderPane {
 
         box.getChildren().addAll(title, detail, buttons);
         overlay.getChildren().add(box);
-        setCenter(overlay);
+
+        StackPane root = (StackPane) getCenter();
+        root.getChildren().add(overlay);
+    }
+
+    private static String phaseName(LiarPhase phase) {
+        return switch (phase) {
+            case DECLARE -> "宣告";
+            case RESPOND -> "回应";
+            case RESOLVE -> "结算";
+            case FINISHED -> "结束";
+        };
     }
 
     private static String name(PlayerId p) {

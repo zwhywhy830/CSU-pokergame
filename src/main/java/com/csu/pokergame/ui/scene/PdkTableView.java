@@ -1,5 +1,10 @@
 package com.csu.pokergame.ui.scene;
 
+import com.cards.ui.background.BackgroundManager;
+import com.cards.ui.component.PlayedCardsView;
+import com.cards.ui.pdk.PdkHandView;
+import com.cards.ui.pdk.PdkPlayerSeat;
+import com.cards.ui.pdk.PdkTableHeader;
 import com.csu.pokergame.core.card.Card;
 import com.csu.pokergame.core.engine.GameCommand;
 import com.csu.pokergame.core.engine.GameSnapshot;
@@ -12,21 +17,17 @@ import com.csu.pokergame.paodekuai.PdkEngine;
 import com.csu.pokergame.paodekuai.PdkSnapshot;
 import com.csu.pokergame.paodekuai.PlayPdkCards;
 import com.csu.pokergame.ui.AppShell;
-import com.csu.pokergame.ui.component.CardView;
 import javafx.animation.PauseTransition;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,7 +35,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-/** 跑得快游戏桌（本地人机：SEAT_1 为玩家，SEAT_2/SEAT_3 为机器人）。 */
+/**
+ * 跑得快游戏桌（本地人机：SEAT_1 为玩家，SEAT_2/SEAT_3 为机器人）。
+ *
+ * <p>阶段 10：用 deckapp-ui 的 Pdk 组件（PdkTableHeader / PdkPlayerSeat /
+ * PlayedCardsView / PdkHandView）替换原先简陋的 Label + CardView 实现，
+ * 引擎交互逻辑（PdkEngine / PdkSnapshot / PlayPdkCards / bot 调度）保持不变。
+ */
 public final class PdkTableView extends BorderPane {
 
     private static final PlayerId LOCAL = PlayerId.SEAT_1;
@@ -44,14 +51,12 @@ public final class PdkTableView extends BorderPane {
     private final Map<PlayerId, RuleBotController> bots;
     private final Set<Card> selected = new LinkedHashSet<>();
 
-    private final Label statusLabel = new Label();
-    private final Label topInfo = new Label();
-    private final Label leftInfo = new Label();
-    private final HBox tableCards = new HBox(8);
-    private final HBox handBox = new HBox(8);
+    private final PdkTableHeader header = new PdkTableHeader();
+    private final PdkPlayerSeat seat2 = new PdkPlayerSeat("♞", "AI1", 1, false);
+    private final PdkPlayerSeat seat3 = new PdkPlayerSeat("♝", "AI2", 1, false);
+    private final PlayedCardsView tableCards = new PlayedCardsView();
     private final ListView<String> log = new ListView<>();
-    private final Button playButton = new Button("出牌");
-    private final Button passButton = new Button("不出");
+    private final PdkHandView handView = new PdkHandView(selected);
 
     public PdkTableView(AppShell shell) {
         this.shell = shell;
@@ -62,92 +67,53 @@ public final class PdkTableView extends BorderPane {
                 PlayerId.SEAT_3, new RuleBotController(new PdkBotPolicy()));
 
         buildLayout();
+        wireActions();
         refresh();
     }
 
     private void buildLayout() {
-        setPadding(new Insets(16));
+        // 背景层
+        BackgroundManager.Background bg = BackgroundManager.createGameBackground();
 
-        // 顶部：左侧返回，中间两家信息，右上角设置
-        leftInfo.getStyleClass().add("player-label");
-        topInfo.getStyleClass().add("player-label");
-        Button back = new Button("返回游戏选择");
+        // 顶部：返回 + 牌桌信息条 + 设置
+        Button back = new Button("返回");
         back.setOnAction(e -> shell.navigate("game-modes"));
         Button settings = new Button("设置");
-        settings.setOnAction(e -> showSettings());
-        HBox info = new HBox(20, leftInfo, topInfo);
-        info.setAlignment(Pos.CENTER);
+        settings.setOnAction(e -> shell.openSettings());
+        HBox topLeft = new HBox(12, back);
+        HBox topRight = new HBox(12, settings);
         BorderPane topBar = new BorderPane();
-        topBar.setLeft(back);
-        topBar.setCenter(info);
-        topBar.setRight(settings);
-        setTop(topBar);
+        topBar.setLeft(topLeft);
+        topBar.setCenter(header);
+        topBar.setRight(topRight);
 
-        // 中央：桌面牌 + 状态
-        VBox center = new VBox(12);
-        center.setAlignment(Pos.CENTER);
-        statusLabel.getStyleClass().add("status-label");
-        tableCards.setAlignment(Pos.CENTER);
-        Label tableLabel = new Label("桌面");
-        tableLabel.getStyleClass().add("section-label");
-        center.getChildren().addAll(statusLabel, tableLabel, tableCards);
+        // 中央：两家座位 + 桌面牌 + 日志
+        seat2.setAlignment(Pos.CENTER);
+        seat3.setAlignment(Pos.CENTER);
+        HBox seats = new HBox(60, seat2, seat3);
+        seats.setAlignment(Pos.CENTER);
 
-        // 日志
         log.getStyleClass().add("log-view");
-        log.setPrefWidth(260);
-        center.getChildren().add(log);
-        ScrollPane centerScroll = new ScrollPane(center);
-        centerScroll.setFitToWidth(true);
-        setCenter(centerScroll);
+        log.setPrefHeight(120);
 
-        // 底部：手牌 + 操作栏
-        VBox bottom = new VBox(10);
-        handBox.setAlignment(Pos.CENTER);
-        HBox actions = new HBox(12);
-        actions.setAlignment(Pos.CENTER);
-        playButton.getStyleClass().add("primary");
-        playButton.setOnAction(e -> playSelected());
-        passButton.setOnAction(e -> pass());
-        Button autoButton = new Button("自动出牌");
-        autoButton.setOnAction(e -> autoPlay());
-        actions.getChildren().addAll(playButton, passButton, autoButton);
-        bottom.getChildren().addAll(handBox, actions);
-        setBottom(bottom);
+        VBox center = new VBox(16, seats, tableCards, log);
+        center.setAlignment(Pos.CENTER);
+
+        // 组装到背景根
+        StackPane root = new StackPane(bg.root(), new BorderPane(topBar, center, null, handView, null));
+        setCenter(root);
     }
 
-    private void showSettings() {
-        shell.openSettings();
-    }
-
-    /** 自动出牌：选择能出的最小牌（张数最少、主点最小）并打出。 */
-    private void autoPlay() {
-        List<GameCommand> legal = engine.legalCommands(LOCAL);
-        List<PlayPdkCards> plays = legal.stream()
-                .filter(cmd -> cmd instanceof PlayPdkCards)
-                .map(cmd -> (PlayPdkCards) cmd)
-                .sorted(Comparator
-                        .comparingInt((PlayPdkCards p) -> p.cards().size())
-                        .thenComparingInt(p -> primaryOf(p)))
-                .toList();
-        if (plays.isEmpty()) {
-            return;
-        }
-        engine.apply(plays.get(0));
-        selected.clear();
-        refresh();
-    }
-
-    private int primaryOf(PlayPdkCards p) {
-        return p.cards().stream()
-                .mapToInt(c -> c.rank().comparisonValue())
-                .max()
-                .orElse(0);
+    private void wireActions() {
+        handView.getActionBar().getPlayButton().setOnAction(e -> playSelected());
+        handView.getActionBar().getPassButton().setOnAction(e -> pass());
+        handView.setOnSelectionChange(s -> refreshActions());
     }
 
     private void refresh() {
         PdkSnapshot snap = (PdkSnapshot) engine.snapshotFor(LOCAL);
-        renderStatus(snap);
-        renderOthers(snap);
+        renderHeader(snap);
+        renderSeats(snap);
         renderTable(snap);
         renderLog(snap);
         renderHand(snap);
@@ -159,71 +125,62 @@ public final class PdkTableView extends BorderPane {
 
         PlayerId current = snap.currentPlayer();
         if (current == LOCAL) {
-            refreshActions(snap);
+            refreshActions();
         } else {
-            playButton.setDisable(true);
-            passButton.setDisable(true);
+            handView.getActionBar().setPlayEnabled(false);
+            handView.getActionBar().setPassEnabled(false);
+            handView.setInteractive(false);
             scheduleBotTurn(current);
         }
     }
 
-    private void renderStatus(PdkSnapshot snap) {
-        statusLabel.setText(snap.currentPlayer() == LOCAL ? "轮到你出牌" : "等待 " + name(snap.currentPlayer()) + " 出牌…");
+    private void renderHeader(PdkSnapshot snap) {
+        header.setMode("跑得快");
+        header.setRoundText(snap.currentPlayer() == LOCAL ? "轮到你出牌" : "等待 " + name(snap.currentPlayer()));
     }
 
-    private void renderOthers(PdkSnapshot snap) {
-        leftInfo.setText(name(PlayerId.SEAT_2) + " 剩 " + snap.remainingCardCounts().get(PlayerId.SEAT_2) + " 张");
-        topInfo.setText(name(PlayerId.SEAT_3) + " 剩 " + snap.remainingCardCounts().get(PlayerId.SEAT_3) + " 张");
+    private void renderSeats(PdkSnapshot snap) {
+        seat2.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_2));
+        seat3.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_3));
+        seat2.setState(snap.currentPlayer() == PlayerId.SEAT_2
+                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.IDLE);
+        seat3.setState(snap.currentPlayer() == PlayerId.SEAT_3
+                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.IDLE);
     }
 
     private void renderTable(PdkSnapshot snap) {
-        tableCards.getChildren().clear();
-        snap.lastMove().ifPresent(move -> {
-            for (Card c : move.cards()) {
-                CardView cv = new CardView(c);
-                cv.setDisable(true);
-                tableCards.getChildren().add(cv);
-            }
-        });
+        snap.lastMove().ifPresentOrElse(
+                move -> tableCards.setCards(move.cards(), name(move.player())),
+                () -> tableCards.setCards(List.of(), null));
     }
 
     private void renderLog(PdkSnapshot snap) {
         log.getItems().setAll(snap.publicEvents());
-        log.scrollTo(snap.publicEvents().size() - 1);
+        if (!snap.publicEvents().isEmpty()) {
+            log.scrollTo(snap.publicEvents().size() - 1);
+        }
     }
 
     private void renderHand(PdkSnapshot snap) {
-        handBox.getChildren().clear();
-        List<Card> sorted = snap.myHand().stream()
-                .sorted(Comparator.comparingInt(c -> c.rank().comparisonValue()))
-                .toList();
-        for (Card card : sorted) {
-            CardView cv = new CardView(card);
-            cv.setSelected(selected.contains(card));
-            cv.setOnAction(e -> {
-                if (selected.contains(card)) {
-                    selected.remove(card);
-                } else {
-                    selected.add(card);
-                }
-                refresh();
-            });
-            handBox.getChildren().add(cv);
-        }
+        handView.setCards(snap.myHand());
+        handView.getSeat().setCardCount(snap.myHand().size());
         if (snap.myHand().size() == 1) {
-            statusLabel.setText("报单！你只剩 1 张牌");
+            header.setAuxText("报单！你只剩 1 张牌");
+        } else {
+            header.setAuxText("");
         }
     }
 
-    private void refreshActions(PdkSnapshot snap) {
+    private void refreshActions() {
         List<GameCommand> legal = engine.legalCommands(LOCAL);
         boolean hasPlay = legal.stream()
                 .filter(cmd -> cmd instanceof PlayPdkCards)
                 .map(cmd -> (PlayPdkCards) cmd)
                 .anyMatch(p -> new LinkedHashSet<>(p.cards()).equals(selected));
-        playButton.setDisable(!hasPlay);
         boolean hasPass = legal.stream().anyMatch(cmd -> cmd instanceof PassPdkTurn);
-        passButton.setDisable(!hasPass);
+        handView.getActionBar().setPlayEnabled(hasPlay);
+        handView.getActionBar().setPassEnabled(hasPass);
+        handView.setInteractive(true);
     }
 
     private void playSelected() {
@@ -284,9 +241,8 @@ public final class PdkTableView extends BorderPane {
         back.setOnAction(e -> shell.navigate("game-modes"));
 
         box.getChildren().addAll(title, detailLabel, new HBox(12, again, back));
-        box.setAlignment(Pos.CENTER);
         overlay.getChildren().add(box);
-        setCenter(new StackPane(overlay));
+        setCenter(new StackPane(BackgroundManager.createGameBackground().root(), overlay));
     }
 
     private static String name(PlayerId p) {
