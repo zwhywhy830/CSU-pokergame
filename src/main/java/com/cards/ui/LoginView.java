@@ -283,7 +283,7 @@ public final class LoginView extends StackPane {
         GameAnimationService.getInstance().installButtonFeedback(root);
 
         Scene scene = new Scene(root, 560, 480);
-        var css = getClass().getResource("/app.css");
+        var css = getClass().getResource("/com/csu/pokergame/ui/theme/app.css");
         if (css != null) {
             scene.getStylesheets().add(css.toExternalForm());
         }

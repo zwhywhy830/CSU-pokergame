@@ -347,3 +347,2951 @@
     -fx-font-size: 15px;
     -fx-text-fill: -color-text;
 }
+
+/* ===== deckapp-ui 组件样式（合并自 game 项目 app.css，已移除 .root 以保留主题 token） ===== */
+
+.app-root {
+    -fx-background-color: linear-gradient(to bottom, #2a3d50, #1a2733);
+}
+
+.app-toolbar {
+    -fx-background-color: linear-gradient(to bottom, #fbfaf5, #ece7da);
+    -fx-border-color: transparent transparent #c9c2b2 transparent;
+    -fx-padding: 6 8 6 8;
+}
+
+.app-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3c2a12;
+}
+
+.suit-glyph {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.glyph-red {
+    -fx-text-fill: #c62828;
+}
+
+.glyph-ink {
+    -fx-text-fill: #202020;
+}
+
+.cards-panel {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 110%, #2f4a61 0%, #223548 60%, #1a2733 100%);
+}
+
+.card-cell {
+    -fx-background-color: transparent;
+}
+
+.card-caption {
+    -fx-font-size: 11px;
+    -fx-text-fill: #f2ead6;
+    -fx-alignment: center;
+}
+
+.card-caption:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.status-label {
+    -fx-background-color: linear-gradient(to top, #161f2a, #22303e);
+    -fx-text-fill: #d9e2ea;
+    -fx-font-size: 12px;
+    -fx-border-color: #0e1620 transparent transparent transparent;
+}
+
+.button {
+    -fx-background-radius: 6;
+    -fx-padding: 4 12 4 12;
+}
+
+.toggle-button {
+    -fx-background-radius: 6;
+}
+
+.scroll-pane,
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ---------- 牌型玩法工具行 ---------- */
+.hand-tools {
+    -fx-background-color: linear-gradient(to bottom, #f3eddd, #e6deca);
+    -fx-border-color: transparent transparent #b9b0a0 transparent;
+}
+
+.hand-tip {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7a6a44;
+    -fx-alignment: center-right;
+}
+
+/* ---------- 牌型结果横幅 ---------- */
+.banner-box {
+    -fx-background-color: rgba(38, 24, 4, 0.82);
+    -fx-background-radius: 16;
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 2;
+    -fx-border-radius: 16;
+    -fx-padding: 10 30 12 30;
+    -fx-effect: dropshadow(gaussian, rgba(255, 200, 60, 0.55), 30, 0.3, 0, 0);
+}
+
+.banner-title {
+    -fx-font-size: 46px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+
+.banner-sub {
+    -fx-font-size: 15px;
+    -fx-text-fill: #fff3d0;
+}
+
+.card-cell:hover {
+    -fx-cursor: hand;
+}
+
+/* ==================== 开始界面（主页） ==================== */
+
+/* 图片背景 + 轻度主题色偏（三个场景共用；明暗层次由 BackgroundManager 的渐变层负责） */
+.bg-theme-root {
+    -fx-background-color: transparent;
+}
+
+.bg-theme-shade {
+    -fx-background-color: rgba(8, 22, 14, 0.10);
+}
+
+.menu-bg-felt {
+    -fx-background-color: linear-gradient(to bottom,
+        #152c1f 0%, #23452e 26%, #3a5731 58%, #55511f 84%, #3c3a1c 100%);
+}
+
+.menu-bg-night {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #33588f 0%, #1c3157 45%, #0a1428 100%);
+}
+
+.menu-corner {
+    -fx-font-size: 140px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Symbol", "Segoe UI";
+}
+
+/* 主标题：书法感字体 + 细金描边 + 微弱暖光（Text 节点，fill 支持渐变） */
+.menu-title {
+    -fx-font-family: "KaiTi", "楷体", "STKaiti", "SimSun", serif;
+    -fx-font-size: 84px;
+    -fx-font-weight: bold;
+    -fx-fill: linear-gradient(to bottom, #fff6cf 0%, #f6d878 45%, #d9a62e 100%);
+    -fx-stroke: #8a5a05;
+    -fx-stroke-width: 1.4;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 110, 0.30), 16, 0.5, 0, 0);
+}
+
+/* 右下角技术备注（原副标题降噪后移到底角） */
+.tech-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(242, 238, 215, 0.55);
+    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+/* 三个按钮共用：柔和大圆角 + 高度一致，宽度由下方权重类控制 */
+.menu-btn {
+    -fx-background-radius: 34;
+    -fx-border-radius: 34;
+    -fx-min-height: 68px;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+/* 主按钮：开始游戏（最宽、最亮，带内高光模拟凸起） */
+.menu-btn-start {
+    -fx-min-width: 356px;
+    -fx-font-size: 24px;
+    -fx-background-color: linear-gradient(to bottom, #ffefa2 0%, #ffd86b 30%, #f6b41e 72%, #d7910a 100%);
+    -fx-text-fill: #4a2c00;
+    -fx-border-color: rgba(255, 244, 200, 0.95) rgba(209, 156, 26, 0.75) rgba(168, 116, 8, 0.75) rgba(255, 244, 200, 0.95);
+    -fx-border-width: 1.5;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 16, 0.3, 0, 4),
+                 innershadow(gaussian, rgba(255, 255, 255, 0.55), 10, 0.18, 0, -2);
+}
+
+.menu-btn-start:hover {
+    -fx-background-color: linear-gradient(to bottom, #fff4bd 0%, #ffe387 30%, #ffc640 72%, #eda50f 100%);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.55), 26, 0.4, 0, 0),
+                 innershadow(gaussian, rgba(255, 255, 255, 0.60), 10, 0.18, 0, -2);
+}
+
+.menu-btn-start:pressed {
+    -fx-background-color: linear-gradient(to bottom, #e0a313, #c88707);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 8, 0.3, 0, 1);
+}
+
+/* 次按钮：游戏规则（墨绿底 + 金字金边） */
+.menu-btn-rules {
+    -fx-min-width: 258px;
+    -fx-background-color: linear-gradient(to bottom, #2f6140, #1f4528);
+    -fx-text-fill: #ffe9b0;
+    -fx-border-color: rgba(255, 213, 79, 0.8);
+    -fx-border-width: 1.6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 12, 0.25, 0, 3);
+}
+
+.menu-btn-rules:hover {
+    -fx-background-color: linear-gradient(to bottom, #3a7650, #2a5a39);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #ffffff;
+}
+
+.menu-btn-rules:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1c3c24, #17331f);
+}
+
+/* 弱按钮：退出游戏（深灰绿底 + 白字细边） */
+.menu-btn-quit {
+    -fx-min-width: 220px;
+    -fx-background-color: linear-gradient(to bottom, #3a453e, #232c27);
+    -fx-text-fill: rgba(255, 255, 255, 0.88);
+    -fx-border-color: rgba(255, 255, 255, 0.32);
+    -fx-border-width: 1.2;
+}
+
+.menu-btn-quit:hover {
+    -fx-background-color: linear-gradient(to bottom, #4a574f, #2e3a33);
+    -fx-border-color: rgba(255, 255, 255, 0.62);
+    -fx-text-fill: #ffffff;
+}
+
+.menu-btn-quit:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1d241f, #171c18);
+}
+
+/* 返回主页（扑克牌页工具栏里的链接按钮） */
+.btn-home {
+    -fx-background-color: transparent;
+    -fx-text-fill: #3c2a12;
+    -fx-cursor: hand;
+}
+
+.btn-home:hover {
+    -fx-text-fill: #8a5a00;
+    -fx-underline: true;
+}
+
+/* ==================== 设置齿轮与浮层面板 ==================== */
+.settings-btn {
+    -fx-background-color: rgba(0, 0, 0, 0.30);
+    -fx-background-radius: 50%;
+    -fx-min-width: 54px;
+    -fx-min-height: 54px;
+    -fx-cursor: hand;
+    -fx-border-color: rgba(255, 213, 79, 0.38);
+    -fx-border-width: 1.4;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 12, 0.3, 0, 3);
+}
+
+.settings-btn:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.22);
+    -fx-border-color: #ffd54f;
+}
+
+.gear-icon {
+    -fx-fill: #f2f6ee;
+}
+
+.modal-shade {
+    -fx-background-color: rgba(0, 0, 0, 0.38);
+}
+
+.settings-panel {
+    -fx-background-color: linear-gradient(to bottom, #fdfbf4, #f0ebdb);
+    -fx-background-radius: 14;
+    -fx-border-color: #cbbfa0;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 20 22 18 22;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 26, 0.25, 0, 8);
+}
+
+.settings-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3c2a12;
+}
+
+.settings-section {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8a7a58;
+}
+
+.settings-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9b8d6f;
+}
+
+.settings-foot {
+    -fx-font-size: 11px;
+    -fx-text-fill: #a99c7e;
+    -fx-alignment: center;
+}
+
+.settings-link-btn {
+    -fx-background-color: #efe6cf;
+    -fx-background-radius: 8;
+    -fx-border-color: #d6c9a8;
+    -fx-border-radius: 8;
+    -fx-text-fill: #5b4720;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.settings-link-btn:hover {
+    -fx-background-color: #e3d6b6;
+}
+
+.icon-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8a7a58;
+    -fx-font-size: 17px;
+    -fx-cursor: hand;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+}
+
+.icon-close:hover {
+    -fx-text-fill: #c62828;
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+    -fx-background-radius: 15;
+}
+
+.seg-toggle {
+    -fx-background-radius: 16;
+    -fx-padding: 5 16 5 16;
+    -fx-cursor: hand;
+}
+
+.seg-toggle:selected {
+    -fx-background-color: #3f9a63;
+    -fx-text-fill: white;
+}
+
+/* ==================== 设置：背景图片选项 ==================== */
+.bg-option {
+    -fx-background-color: #f7f2e4;
+    -fx-background-radius: 8;
+    -fx-border-color: #d6c9a8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-text-fill: #5b4720;
+    -fx-font-size: 11px;
+    -fx-padding: 6 8 6 8;
+    -fx-graphic-text-gap: 4;
+    -fx-cursor: hand;
+}
+
+.bg-option:hover {
+    -fx-background-color: #f1e9d3;
+}
+
+.bg-option:selected {
+    -fx-background-color: #fdf3d8;
+    -fx-border-color: #c9982f;
+    -fx-border-width: 2;
+    -fx-text-fill: #8a6a2f;
+}
+
+/* ==================== 设置：音量 / 亮度 ==================== */
+.brightness-shade {
+    -fx-background-color: rgba(0, 0, 0, 0.9);
+}
+
+.settings-row-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5b4720;
+    -fx-min-width: 40px;
+}
+
+.value-chip {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8a6a2f;
+    -fx-font-weight: bold;
+    -fx-alignment: center-right;
+    -fx-min-width: 46px;
+}
+
+.settings-slider {
+    -fx-pref-width: 150px;
+}
+
+.settings-slider .track {
+    -fx-background-color: #ddd2b4;
+    -fx-background-radius: 4;
+    -fx-pref-height: 6;
+}
+
+.settings-slider .thumb {
+    -fx-background-color: #c9982f;
+}
+
+.settings-slider .colored-track {
+    -fx-background-color: #e5b54a;
+}
+
+.settings-slider:hover .thumb {
+    -fx-background-color: #a06c10;
+}
+
+/* ==================== 规则界面 ==================== */
+.rules-bg {
+    -fx-background-color:
+        linear-gradient(to bottom, #254460 0%, #12263c 55%, #0c1a29 100%);
+}
+
+.rules-card {
+    -fx-background-color: linear-gradient(to bottom, #fffdf6, #f4efdf);
+    -fx-background-radius: 18;
+    -fx-border-color: #c9bc9b;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-padding: 36 50 30 50;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 30, 0.3, 0, 8);
+}
+
+.rules-title {
+    -fx-font-size: 34px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a5c1d;
+}
+
+.rules-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: #9b8d6f;
+}
+
+.rules-sec-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+}
+
+.rules-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: #4a3c22;
+    -fx-line-spacing: 3;
+}
+
+.rules-back {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6b5a35;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-border-color: #c9b98f;
+    -fx-border-radius: 18;
+    -fx-background-radius: 18;
+    -fx-padding: 8 22 8 22;
+    -fx-max-width: 200px;
+}
+
+.rules-back:hover {
+    -fx-background-color: #efe3bd;
+    -fx-text-fill: #5b3a00;
+}
+
+/* 规则正文（Markdown 风格渲染） */
+.rules-body {
+    -fx-padding: 2 0 2 0;
+}
+
+.rules-h1 {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f6b4f;
+    -fx-padding: 10 0 2 0;
+}
+
+.rules-h2 {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+    -fx-padding: 8 0 0 0;
+}
+
+.rules-run {
+    -fx-font-size: 14px;
+    -fx-fill: #46391f;
+    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+}
+
+.rules-strong {
+    -fx-font-weight: bold;
+    -fx-fill: #a03a00;
+}
+
+.rules-quote {
+    -fx-fill: #8d7f5f;
+    -fx-font-style: italic;
+}
+
+.rules-card .separator {
+    -fx-padding: 8 0 4 0;
+}
+
+.rules-card .separator .line {
+    -fx-border-color: #dccfae;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ==================== 游戏选择界面（开始游戏后） ==================== */
+.game-choice-bg {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #2f5440 0%, #1c3a2a 45%, #0f1f15 100%);
+}
+
+/* 大标题：字号略微缩小、字重柔和，配轻微暖光 */
+.game-choice-title {
+    -fx-font-size: 44px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #ffe6a0;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 120, 0.22), 14, 0.35, 0, 2);
+}
+
+/* 副标题：保持次要层级但保证可读性（暗绿底上需 ≥0.75 不透明度） */
+.game-choice-sub {
+    -fx-font-size: 15px;
+    -fx-text-fill: rgba(226, 236, 246, 0.78);
+}
+
+/* 游戏入口卡片：idle/hover/pressed 各态底色必须在此显式声明，
+   否则 CSS 重算时会回退到 modena 默认 .button 的浅色底（表现为闪白）；
+   DeckApp.styleGameCard 的 hover 动画在此基础上平滑插值 */
+.game-option {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(225, 230, 236, 0.30);
+    -fx-border-width: 2;
+    -fx-border-radius: 22;
+    -fx-padding: 2;
+    -fx-cursor: hand;
+    /* 宽度随窗口自适应（HBox hgrow 平分），小窗口下自动收窄不溢出屏幕 */
+    -fx-min-width: 380px;
+    -fx-pref-width: 470px;
+    -fx-max-width: 540px;
+    /* 高度下限必须高于内部 VBox 内容总高（圆徽92+标题+两行简介+标签+间距+内边距≈285），
+       否则小窗口下文字会溢出卡片圆角边界 */
+    -fx-min-height: 296px;
+    -fx-pref-height: 306px;
+    -fx-max-height: 340px;
+}
+
+/* 悬浮态：金色高亮（仅鼠标移到该卡片时生效；颜色与 DeckApp.styleGameCard 动画终态一致） */
+.game-option:hover {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 246, 205, 0.30), rgba(255, 213, 79, 0.17));
+    -fx-border-color: rgba(255, 230, 160, 0.98);
+}
+
+.game-option:pressed {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 246, 205, 0.38), rgba(255, 213, 79, 0.24));
+    -fx-border-color: rgba(255, 230, 160, 0.98);
+}
+
+/* 悬浮时卡片内的图标描边、标题、标签同步转为金色高亮 */
+.game-option:hover .game-icon-badge {
+    -fx-border-color: rgba(255, 226, 150, 0.98);
+}
+
+.game-option:hover .game-option-title {
+    -fx-text-fill: #ffedbd;
+    -fx-effect: dropshadow(gaussian, rgba(255, 214, 120, 0.35), 12, 0.3, 0, 0);
+}
+
+/* 悬浮时卡片转金色调，简介同步转暖白色（冷灰蓝在金底上会发灰；金罩半透明偏暗，浅字对比更高） */
+.game-option:hover .game-option-desc {
+    -fx-text-fill: #fdf0cf;
+}
+
+.game-option:hover .game-option-tag {
+    -fx-text-fill: #4a3200;
+    -fx-border-color: rgba(255, 240, 200, 0.9);
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 224, 130, 0.96), rgba(232, 172, 56, 0.96));
+}
+
+/* 图标金属圆徽：深色金属底 + 顶部内高光 + 细金描边 */
+.game-icon-badge {
+    -fx-min-width: 92px;
+    -fx-min-height: 92px;
+    -fx-max-width: 92px;
+    -fx-max-height: 92px;
+    -fx-background-radius: 50;
+    -fx-background-color:
+        radial-gradient(center 50% 32%, radius 68%,
+            #454d55 0%, #2b3137 52%, #161a1e 100%);
+    -fx-border-color: rgba(220, 184, 96, 0.85);
+    -fx-border-width: 2;
+    -fx-border-radius: 50;
+    -fx-effect:
+        innershadow(gaussian, rgba(255, 255, 255, 0.28), 14, 0.25, 0, -3),
+        dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0.35, 0, 5);
+}
+
+.game-icon-glyph {
+    -fx-font-smoothing-type: lcd;
+}
+
+/* 卡片内标题：加粗放大；常态白色，悬浮时随卡片转金色（见上方 hover 规则） */
+.game-option-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f4f7fa;
+}
+
+/* 简介文字：次级层级（字号小），但不透明度提到 0.88 保证暗底上清晰 */
+.game-option-desc {
+    -fx-font-size: 12.5px;
+    -fx-text-fill: rgba(224, 232, 242, 0.88);
+    -fx-line-spacing: 3;
+}
+
+/* 底部标签：圆角小药丸 + 底色填充；常态浅瓷白，悬浮时变金色填充（见上方 hover 规则） */
+.game-option-tag {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f7fafd;
+    -fx-border-color: rgba(255, 255, 255, 0.38);
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-background-color: rgba(255, 255, 255, 0.20);
+    -fx-padding: 5 16 5 16;
+}
+
+/* 返回按钮：用深墨色半透明底（而非白色罩染），保证压在山水 / 金色八角边框 /
+   角花等任何装饰层之上时文字对比都稳定；与同页齿轮按钮风格一致 */
+.game-back {
+    -fx-background-color: rgba(8, 18, 12, 0.48);
+    -fx-text-fill: #f5f8f3;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 24;
+    -fx-background-radius: 24;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+}
+
+/* ==================== 个人信息编辑界面 ==================== */
+
+/* 中央卡片：深色半透明玻璃质感，与 game-option 卡片同源；保证表单内容浮在山水背景之上 */
+.profile-center {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(225, 230, 236, 0.30);
+    -fx-border-width: 2;
+    -fx-border-radius: 22;
+    -fx-padding: 34 46 30 46;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 26, 0.3, 0, 8);
+    -fx-max-width: 640px;
+}
+
+/* 大号预览头像：覆盖 .user-avatar 的 46x46，扩到 86x86，与页面顶部圆徽呼应 */
+.user-avatar-lg {
+    -fx-min-width: 86px;
+    -fx-min-height: 86px;
+    -fx-max-width: 86px;
+    -fx-max-height: 86px;
+}
+
+/* 预览容器：左侧大头像 + 右侧昵称/状态文本 */
+.profile-preview {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-padding: 16 22 16 16;
+}
+
+/* 预览昵称：放大并随输入实时变化 */
+.profile-preview-nick {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #fff3c4;
+}
+
+/* 头像选择行：横向排列候选按钮，整体居中 */
+.profile-avatar-row {
+    -fx-alignment: center-left;
+    -fx-padding: 0 2 0 2;
+}
+
+/* 单个头像候选按钮：方形圆角，深色玻璃底，选中时金色高亮 */
+.profile-avatar-btn {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(225, 230, 236, 0.30);
+    -fx-border-radius: 14;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #fff3c4;
+    /* 象棋符号（♛♚♝…）走 Segoe UI Symbol，扑克/机器人 emoji（🃏🤖）回退 Segoe UI Emoji */
+    -fx-font-family: "Segoe UI Symbol", "Segoe UI Emoji", "System";
+    -fx-font-size: 26px;
+    -fx-min-width: 56px;
+    -fx-min-height: 56px;
+    -fx-cursor: hand;
+}
+
+.profile-avatar-btn:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.18);
+    -fx-border-color: rgba(255, 230, 160, 0.8);
+}
+
+.profile-avatar-btn:selected {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 246, 205, 0.34), rgba(255, 213, 79, 0.22));
+    -fx-border-color: rgba(255, 230, 160, 0.98);
+    -fx-text-fill: #ffedbd;
+}
+
+/* 昵称输入框：深色玻璃底 + 金色焦点边，文字浅米色 */
+.profile-nick-field {
+    -fx-background-color: rgba(8, 18, 12, 0.5);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.30);
+    -fx-border-radius: 12;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #f5f8f3;
+    -fx-prompt-text-fill: rgba(245, 248, 243, 0.45);
+    -fx-font-size: 16px;
+    -fx-padding: 9 12 9 12;
+}
+
+.profile-nick-field:focused {
+    -fx-border-color: rgba(255, 213, 79, 0.9);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.25), 12, 0.3, 0, 0);
+}
+
+/* 底部操作行：取消 + 保存并返回 */
+.profile-action-row {
+    -fx-padding: 6 0 0 0;
+}
+
+/* 保存按钮：复用 menu-btn-start 金色主按钮风格，再放大字重，作为本页主行动点 */
+.profile-save-btn {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 11 28 11 28;
+}
+
+/* ==================== 加载动画页 ==================== */
+
+/* 加载卡片：深色玻璃圆角面板，悬浮于山水背景之上 */
+.loading-card {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+    -fx-background-radius: 24;
+    -fx-border-color: rgba(225, 230, 236, 0.32);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 24;
+    -fx-padding: 44 60 38 60;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 30, 0.3, 0, 10);
+}
+
+/* 进度条轨道：暗色凹陷槽，圆角 */
+.loading-bar-track {
+    -fx-background-color: rgba(8, 18, 12, 0.6);
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    /* 裁剪子节点：让高亮条滑过轨道时两端被圆角截断 */
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+/* 进度条高亮条：金色渐变 + 暖光晕；宽度由动画 0 -> 轨道宽 驱动（确定式填满） */
+.loading-bar-fill {
+    -fx-background-color:
+        linear-gradient(to bottom, #fff3c4 0%, #e8c25e 55%, #b07f1e 100%);
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.55), 10, 0.35, 0, 0);
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
+    -fx-min-width: 0;
+    -fx-pref-width: 280px;
+    -fx-max-width: 280px;
+}
+
+/* 加载提示文案：柔和暖白，带微弱光晕 */
+.loading-tip {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 230, 160, 0.92);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.30), 10, 0.3, 0, 0);
+    -fx-letter-spacing: 2px;
+}
+
+/* ==================== 对局结算遮罩（胜利 / 失败） ==================== */
+
+/* 遮罩层：铺满牌桌，默认透明（背景色由内部 shade 承担） */
+.result-overlay {
+    -fx-background-color: transparent;
+}
+
+/* 半透明深色压暗层：让牌桌退后，突出结算卡片 */
+.result-shade {
+    -fx-background-color: rgba(6, 14, 10, 0.72);
+}
+
+/* 结算卡片：深色玻璃圆角面板 */
+.result-card {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(30, 48, 38, 0.97), rgba(12, 26, 18, 0.97));
+    -fx-background-radius: 26;
+    -fx-border-width: 2;
+    -fx-border-radius: 26;
+    -fx-padding: 42 66 38 66;
+    -fx-max-width: 540px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 36, 0.35, 0, 12);
+}
+
+/* 胜利：金色描边 + 暖光投影 */
+.result-win {
+    -fx-border-color: rgba(255, 213, 120, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(255, 200, 90, 0.38), 44, 0.32, 0, 0);
+}
+
+/* 失败：冷灰描边 + 低调投影 */
+.result-lose {
+    -fx-border-color: rgba(170, 190, 200, 0.42);
+}
+
+/* 结果徽标字符 */
+.result-glyph {
+    -fx-font-family: "Segoe UI Symbol";
+    -fx-font-size: 62px;
+}
+.result-win .result-glyph {
+    -fx-fill: linear-gradient(from 0% 0% to 0% 100%,
+        #fff3c4 0%, #e8c25e 55%, #b07f1e 100%);
+    -fx-effect: dropshadow(gaussian, rgba(255, 210, 90, 0.55), 18, 0.4, 0, 0);
+}
+.result-lose .result-glyph {
+    -fx-fill: linear-gradient(from 0% 0% to 0% 100%,
+        #d7dee6 0%, #9aa6b2 55%, #6b7681 100%);
+    -fx-effect: dropshadow(gaussian, rgba(150, 170, 190, 0.3), 14, 0.35, 0, 0);
+}
+
+/* 结果标题 */
+.result-title {
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 6px;
+}
+.result-win .result-title {
+    -fx-text-fill: #ffe9a8;
+    -fx-effect: dropshadow(gaussian, rgba(255, 210, 90, 0.45), 16, 0.35, 0, 0);
+}
+.result-lose .result-title {
+    -fx-text-fill: #c7ced6;
+    -fx-effect: dropshadow(gaussian, rgba(120, 140, 160, 0.3), 12, 0.3, 0, 0);
+}
+
+/* 结果副标题 */
+.result-subtitle {
+    -fx-font-size: 16px;
+    -fx-text-fill: rgba(235, 240, 235, 0.85);
+    -fx-text-alignment: center;
+}
+
+/* 结算按钮：统一最小宽度，重新开始为主行动点 */
+.result-btn {
+    -fx-min-width: 156px;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 26 10 26;
+}
+.result-btn-restart {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 224, 140, 0.95), rgba(212, 162, 60, 0.95));
+    -fx-text-fill: #3a2a08;
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 240, 200, 0.9);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(255, 200, 90, 0.4), 16, 0.3, 0, 2);
+}
+.result-btn-restart:hover {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 232, 166, 1), rgba(226, 176, 74, 1));
+}
+.result-btn-back {
+    -fx-background-color: rgba(8, 18, 12, 0.55);
+    -fx-text-fill: #f2f6ee;
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(225, 230, 236, 0.45);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 12;
+}
+.result-btn-back:hover {
+    -fx-border-color: rgba(255, 213, 120, 0.9);
+    -fx-text-fill: #ffe9a8;
+}
+
+.game-back:hover {
+    -fx-background-color: rgba(8, 18, 12, 0.68);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #ffffff;
+}
+
+/* ==================== 玩法模式选择界面（点击游戏卡片后） ==================== */
+.mode-bg {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #264838 0%, #173025 45%, #0a1810 100%);
+}
+
+/* 玩家头像 + 昵称卡片（模式选择页右上角，与左上角“返回”按钮对称呼重） */
+.user-card {
+    -fx-background-color: rgba(8, 18, 12, 0.48);
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 28;
+    -fx-background-radius: 28;
+    -fx-padding: 8 18 8 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0.3, 0, 3);
+}
+
+/* 头像圆徽：复用页内金属圆徽配色，保证视觉一致 */
+.user-avatar {
+    -fx-min-width: 46px;
+    -fx-min-height: 46px;
+    -fx-max-width: 46px;
+    -fx-max-height: 46px;
+    -fx-background-radius: 50;
+    -fx-background-color:
+        radial-gradient(center 50% 32%, radius 68%,
+            #454d55 0%, #2b3137 52%, #161a1e 100%);
+    -fx-border-color: rgba(220, 184, 96, 0.85);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 50;
+    -fx-effect:
+        innershadow(gaussian, rgba(255, 255, 255, 0.28), 8, 0.25, 0, -2),
+        dropshadow(gaussian, rgba(0, 0, 0, 0.45), 8, 0.35, 0, 3);
+}
+
+.user-nick {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f8f3;
+}
+
+.user-stat {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245, 248, 243, 0.65);
+}
+
+/* ==================== 主页：游戏规则弹窗 ==================== */
+.rules-modal-card {
+    -fx-background-color: linear-gradient(to bottom, #fffdf6, #f1ecdc);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(216, 177, 77, 0.9);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 20;
+    -fx-padding: 22 30 16 30;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 34, 0.3, 0, 10);
+}
+
+.rules-modal-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6b4f14;
+}
+
+.rules-tab {
+    -fx-background-radius: 16;
+    -fx-padding: 6 24 6 24;
+    -fx-background-color: transparent;
+    -fx-text-fill: #7a6535;
+    -fx-border-color: rgba(0, 0, 0, 0.14);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.rules-tab:hover {
+    -fx-background-color: rgba(31, 69, 40, 0.12);
+}
+
+.rules-tab:selected {
+    -fx-background-color: #2f6140;
+    -fx-text-fill: #ffe9b0;
+    -fx-border-color: #2f6140;
+}
+
+.rules-modal-foot {
+    -fx-font-size: 11px;
+    -fx-text-fill: #a99c7e;
+    -fx-alignment: center;
+}
+
+.rules-modal-card .rules-body {
+    -fx-padding: 4 6 4 2;
+}
+
+.rules-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.rules-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ==================== 游戏牌桌（本地人机 / 局域网联机） ==================== */
+
+/* 牌桌根容器：透明，让山水背景透出 */
+.table-root {
+    -fx-background-color: transparent;
+}
+
+/* 顶部状态条：深色玻璃 + 金色底边 */
+.table-status-bar {
+    -fx-background-color: linear-gradient(to bottom, rgba(8,22,14,0.72), rgba(8,22,14,0.55));
+    -fx-border-color: rgba(220,184,96,0.55);
+    -fx-border-width: 0 0 1.5 0;
+    -fx-text-fill: #ffe6a0;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 18;
+}
+
+/* 桌面中区 + 手牌横排 */
+.table-center-row, .table-hand-row {
+    -fx-alignment: center;
+    -fx-padding: 8;
+}
+.table-center-wrap {
+    -fx-background-color: rgba(8,28,18,0.30);
+    -fx-background-radius: 18;
+    -fx-border-color: rgba(220,184,96,0.25);
+    -fx-border-width: 1;
+    -fx-border-radius: 18;
+}
+
+/* 手牌 ImageView：阴影 + 手型光标 */
+.table-card-img {
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 9, 0.3, 0, 4);
+}
+
+/* 桌面动作按钮：复用金色主按钮风格 */
+.table-action-btn {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 26;
+}
+.table-action-btn:disabled {
+    -fx-opacity: 0.4;
+}
+
+/* 右侧事件日志：暗玻璃列表 */
+.table-log {
+    -fx-background-color: rgba(8,22,14,0.50);
+    -fx-border-color: rgba(220,184,96,0.35);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+.table-log .list-cell {
+    -fx-text-fill: rgba(226,236,246,0.82);
+    -fx-font-size: 12px;
+    -fx-background-color: transparent;
+}
+
+/* 骗子酒馆专属 */
+.table-opponent-strip {
+    -fx-alignment: center;
+    -fx-spacing: 26;
+    -fx-padding: 10;
+}
+.table-liar-target {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+.table-liar-phase {
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(226,236,246,0.85);
+}
+.table-seat-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe6a0;
+}
+.table-seat-dead {
+    -fx-text-fill: rgba(229,72,77,0.85);
+    -fx-strikethrough: true;
+}
+.table-hint {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(226,236,246,0.70);
+    -fx-alignment: center;
+}
+
+/* 联机大厅 IP 输入框 */
+.lan-ip-field {
+    -fx-background-color: rgba(8,22,14,0.55);
+    -fx-text-fill: #ffe6a0;
+    -fx-border-color: rgba(220,184,96,0.55);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-prompt-text-fill: rgba(226,236,246,0.45);
+}
+
+/* ================================================================
+   大厅视觉升级（第一阶段）：AvatarView / 首页玩家卡 / 底部功能入口
+   ================================================================ */
+
+/* ---------------- AvatarView 头像组件 ---------------- */
+.avatar-view {
+    -fx-alignment: center-left;
+    -fx-spacing: 12;
+}
+.avatar-circle {
+    -fx-min-width: 54px;
+    -fx-min-height: 54px;
+    -fx-max-width: 54px;
+    -fx-max-height: 54px;
+    -fx-background-color: radial-gradient(center 50% 32%, radius 68%,
+        #454d55 0%, #2b3137 52%, #161a1e 100%);
+    -fx-background-radius: 50;
+    -fx-border-color: rgba(220,184,96,0.85);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 50;
+    -fx-effect: innershadow(gaussian, rgba(255,255,255,0.28), 8, 0.25, 0, -2),
+                dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0.35, 0, 3);
+}
+.avatar-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f8f3;
+}
+.avatar-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245,248,243,0.65);
+}
+.avatar-level {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+    -fx-background-color: rgba(255,213,79,0.18);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255,213,79,0.45);
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 1 8 1 8;
+}
+
+/* 首页左上角玩家卡：玻璃药丸（叠加在 AvatarView 根上） */
+.home-player-card {
+    -fx-background-color: rgba(8,18,12,0.48);
+    -fx-border-color: rgba(255,255,255,0.5);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 30;
+    -fx-background-radius: 30;
+    -fx-padding: 8 20 8 10;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 12, 0.3, 0, 3);
+}
+.home-player-card:hover {
+    -fx-background-color: rgba(12,28,18,0.66);
+    -fx-border-color: rgba(255,213,79,0.75);
+}
+
+/* ---------------- 首页次级按钮（游戏规则 / 退出） ---------------- */
+.menu-btn-sub {
+    -fx-min-width: 168px;
+    -fx-min-height: 46px;
+    -fx-max-height: 46px;
+    -fx-font-size: 15px;
+}
+
+/* ---------------- 底部功能入口栏 ---------------- */
+.lobby-bottom-bar {
+    -fx-alignment: center;
+    -fx-spacing: 18;
+}
+.lobby-entry {
+    -fx-background-color: rgba(8,18,12,0.52);
+    -fx-background-radius: 24;
+    -fx-border-color: rgba(255,213,79,0.55);
+    -fx-border-radius: 24;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #ffe9b0;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 22 9 16;
+    -fx-cursor: hand;
+    -fx-content-display: LEFT;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 10, 0.3, 0, 3);
+}
+.lobby-entry:hover {
+    -fx-background-color: rgba(255,213,79,0.20);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #fff6d8;
+}
+.lobby-entry .entry-glyph {
+    -fx-padding: 0 8 0 0;
+}
+
+/* ================================================================
+   牌桌座位系统（第二阶段）：SeatView
+   ================================================================ */
+
+.seat-view {
+    -fx-alignment: center;
+    -fx-spacing: 6;
+    -fx-padding: 6 10;
+}
+
+/* 座位容器外框（深色玻璃 + 金边微光） */
+.seat-view {
+    -fx-background-color: rgba(8,22,14,0.52);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(220,184,96,0.30);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 10, 0.3, 0, 2);
+    -fx-min-width: 104;
+}
+
+/* 头像区：让 AvatarView 圆头像居中 */
+.seat-avatar {
+    -fx-padding: 0;
+}
+
+/* 金色光环（当前回合）—— 代码侧 Circle 控制，这里只设投影 */
+.seat-ring {
+    -fx-effect: dropshadow(gaussian, rgba(255,213,79,0.55), 12, 0.3, 0, 0);
+}
+
+/* 牌数徽章 / 额外信息：金色药丸 */
+.seat-card-badge {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+    -fx-background-color: rgba(255,213,79,0.18);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255,213,79,0.40);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 2 10 2 10;
+    -fx-alignment: center;
+}
+
+/* 座位状态文本（思考中…/出局 等） */
+.seat-status {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,233,160,0.88);
+    -fx-alignment: center;
+}
+
+/* 牌桌座位条（横向排布所有 SeatView） */
+.seat-strip {
+    -fx-alignment: center;
+    -fx-spacing: 24;
+    -fx-padding: 8 10;
+    -fx-background-color: linear-gradient(to bottom, rgba(8,22,14,0.72), rgba(8,22,14,0.48));
+    -fx-border-color: rgba(220,184,96,0.45);
+    -fx-border-width: 0 0 1.5 0;
+}
+
+/* ================================================================
+   手牌与出牌动画系统（第三阶段）：HandCardView / PlayedCardsView
+   ================================================================ */
+
+/* 手牌容器 */
+.hand-card-view {
+    -fx-alignment: center;
+    -fx-spacing: 6;
+    -fx-padding: 8;
+}
+
+/* 手牌单张：基础阴影 + 手型光标 */
+.hand-card {
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 9, 0.3, 0, 4);
+    -fx-transition: -fx-translate-y 180ms ease-out, -fx-effect 180ms ease-out;
+}
+
+/* hover：轻微上浮 + 阴影增强 */
+.hand-card-hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 14, 0.35, 0, 8);
+}
+
+/* 选中：上浮 + 金色边框 + 阴影增强 */
+.hand-card-selected {
+    -fx-effect: dropshadow(gaussian, rgba(255,213,79,0.65), 16, 0.4, 0, 8);
+}
+
+/* 出牌区容器 */
+.played-cards-view {
+    -fx-alignment: center;
+    -fx-spacing: 6;
+    -fx-padding: 8;
+}
+
+/* 出牌区玩家标签 */
+.played-player-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,233,160,0.85);
+    -fx-alignment: center;
+}
+
+/* 出牌区卡牌行 */
+.played-card-row {
+    -fx-alignment: center;
+    -fx-spacing: 6;
+}
+
+/* 桌面已出的牌：阴影 */
+.played-card {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0.3, 0, 3);
+}
+
+/* ================================================================
+   胜利庆祝 + 金币栏（第四阶段）：WinCelebration / CoinBar
+   ================================================================ */
+
+/* 全屏庆祝遮罩 */
+.win-overlay {
+    -fx-background-color: transparent;
+}
+
+/* 庆祝卡片 */
+.win-card {
+    -fx-background-color: rgba(8,22,14,0.85);
+    -fx-background-radius: 24;
+    -fx-border-color: rgba(220,184,96,0.6);
+    -fx-border-width: 2;
+    -fx-border-radius: 24;
+    -fx-padding: 36 60 36 60;
+    -fx-alignment: center;
+    -fx-spacing: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 40, 0.35, 0, 10);
+    -fx-max-width: 540;
+}
+
+/* 胜利卡片：金色辉光 */
+.win-victory {
+    -fx-border-color: rgba(255,213,120,0.9);
+    -fx-effect: dropshadow(gaussian, rgba(255,200,90,0.5), 50, 0.4, 0, 0);
+}
+
+/* 失败卡片：冷灰 */
+.win-defeat {
+    -fx-border-color: rgba(170,190,200,0.5);
+    -fx-effect: dropshadow(gaussian, rgba(120,140,160,0.3), 30, 0.3, 0, 0);
+}
+
+/* 金币栏 */
+.coin-bar {
+    -fx-background-color: rgba(8,18,12,0.52);
+    -fx-background-radius: 18;
+    -fx-border-color: rgba(255,213,79,0.45);
+    -fx-border-width: 1.5;
+    -fx-border-radius: 18;
+    -fx-padding: 6 16 6 8;
+    -fx-alignment: center;
+    -fx-spacing: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 10, 0.3, 0, 2);
+}
+
+/* 金币图标容器 */
+.coin-icon-wrap {
+    -fx-padding: 0;
+}
+
+/* 金币数字 */
+.coin-amount {
+    -fx-font-family: "Segoe UI Symbol";
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+    -fx-effect: dropshadow(gaussian, rgba(255,200,90,0.4), 8, 0.3, 0, 0);
+}
+
+/* ================================================================
+   玩家成长反馈（阶段 9）：等级称号 / 经验进度 / 结算成长面板
+   ================================================================ */
+
+/* ---------------- 等级称号（AvatarView：徽章 emoji + 称号文字） ---------------- */
+.avatar-badge {
+    -fx-fill: #ffe9a8;
+}
+.avatar-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ---------------- 成长信息（AvatarView：经验进度 + 金币数量） ---------------- */
+.avatar-metric-key {
+    -fx-font-size: 10px;
+    -fx-text-fill: rgba(245,248,243,0.55);
+}
+.avatar-metric-value {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245,248,243,0.9);
+}
+.avatar-gold-value {
+    -fx-text-fill: #ffe9a8;
+}
+
+/* 经验进度条 */
+.avatar-exp-bar {
+    -fx-pref-height: 6px;
+    -fx-min-height: 6px;
+    -fx-max-height: 6px;
+}
+.avatar-exp-bar > .track {
+    -fx-background-color: rgba(255,255,255,0.16);
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+}
+.avatar-exp-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #e8c25e, #fff3c4);
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+/* ---------------- 结算成长反馈面板（GrowthResultPanel） ---------------- */
+.growth-result {
+    -fx-padding: 10 4 4 4;
+}
+.growth-key {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245,248,243,0.55);
+}
+.growth-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245,248,243,0.92);
+}
+.growth-value-win {
+    -fx-text-fill: #7ee787;
+}
+.growth-value-lose {
+    -fx-text-fill: #c7ced6;
+}
+.growth-value-gold {
+    -fx-text-fill: #ffe9a8;
+}
+.growth-value-exp {
+    -fx-text-fill: #9fd8ff;
+}
+.growth-value-level {
+    -fx-text-fill: #ffe9b0;
+}
+
+/* 升级高亮块：升级成功 / 升级奖励 */
+.growth-upgrade {
+    -fx-padding: 6 12 6 12;
+    -fx-background-color: rgba(255,213,79,0.12);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255,213,79,0.55);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+.growth-upgrade-title {
+    -fx-text-fill: #ffd54f;
+}
+.growth-upgrade-reward {
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ================================================================
+   玩家个人中心（阶段 10）：ProfileView
+   ================================================================ */
+
+/* 中央卡片：与「个人信息编辑页」同源的深色玻璃面板，保证内容浮在山水背景之上 */
+.player-center {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(225, 230, 236, 0.30);
+    -fx-border-width: 2;
+    -fx-border-radius: 22;
+    -fx-padding: 28 40 26 40;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 26, 0.3, 0, 8);
+}
+
+/* ---------------- 顶部身份卡：大头像 + 昵称 / 称号 / 等级 / 经验 / 金币 ---------------- */
+.player-head {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-padding: 16 24 16 16;
+}
+
+.player-nick {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #fff3c4;
+}
+
+/* 等级徽章（emoji，用 Text 渲染，因此是 -fx-fill） */
+.player-badge {
+    -fx-fill: #ffe9a8;
+}
+
+/* 等级称号文字：白银 / 黄金 / 大师 */
+.player-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+
+/* 等级数字 */
+.player-level {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f8f3;
+}
+
+/* 经验进度条（比首页小卡更宽更高） */
+.player-exp-bar {
+    -fx-pref-height: 10px;
+    -fx-min-height: 10px;
+    -fx-max-height: 10px;
+}
+.player-exp-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.16);
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+}
+.player-exp-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #e8c25e, #fff3c4);
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+/* 键值文本：经验 / 金币 */
+.player-metric-key {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.58);
+}
+.player-metric-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 248, 243, 0.92);
+}
+.player-gold-value {
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ---------------- 金币充值区（阶段 12） ---------------- */
+.player-recharge {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-padding: 12 18 12 18;
+}
+
+.player-recharge-btn {
+    -fx-background-radius: 10;
+    -fx-padding: 6 16 6 16;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2b2110;
+    -fx-background-color: linear-gradient(to bottom, #ffe08a, #f0b840);
+    -fx-cursor: hand;
+}
+.player-recharge-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, #fff0b0, #ffc94f);
+}
+
+/* 金币区累计统计（阶段 12-2）：累计获得 / 累计消耗 */
+.player-coin-totals {
+    -fx-padding: 2 0 0 0;
+}
+.player-coin-earned {
+    -fx-text-fill: #8de08d;
+}
+.player-coin-spent {
+    -fx-text-fill: #ff9f9f;
+}
+
+/* ---------------- 金币流水区（阶段 12-2） ---------------- */
+.player-coin-log {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-padding: 12 18 12 18;
+}
+/* 流水滚动容器：高度受限，超过 10 条由滚动条承接 */
+.player-coin-log-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+.player-coin-log-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-coin-log-list {
+    -fx-padding: 0 2 0 0;
+}
+.player-coin-log-row {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-padding: 6 12 6 12;
+}
+.player-coin-log-change {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+/* 增加：绿色 */
+.player-coin-log-income {
+    -fx-text-fill: #8de08d;
+}
+/* 消耗：红色 */
+.player-coin-log-expense {
+    -fx-text-fill: #ff9f9f;
+}
+.player-coin-log-reason {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.82);
+}
+.player-coin-log-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245, 248, 243, 0.42);
+}
+.player-coin-log-empty {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+    -fx-padding: 4 0 4 0;
+}
+
+/* ---------------- 我的资产 / 背包（阶段 13） ---------------- */
+.player-inventory {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-padding: 12 18 12 18;
+}
+.player-inventory-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+.player-inventory-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-inventory-list {
+    -fx-padding: 0 2 0 0;
+}
+.player-inventory-row {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-padding: 6 12 6 12;
+}
+.player-inventory-icon {
+    -fx-font-size: 16px;
+}
+.player-inventory-name {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.9);
+}
+.player-inventory-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+}
+.player-inventory-count {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd75e;
+}
+.player-inventory-use {
+    -fx-background-radius: 10;
+    -fx-padding: 4 14 4 14;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0d2a16;
+    -fx-background-color: linear-gradient(to bottom, #b7f0c2, #5fd07c);
+    -fx-cursor: hand;
+}
+.player-inventory-use:hover {
+    -fx-background-color: linear-gradient(to bottom, #d3ffdc, #74de90);
+}
+
+/* ---------------- 当前效果状态（阶段 15） ---------------- */
+.player-status-row {
+    -fx-padding: 2 0 0 0;
+}
+.player-status {
+    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 10;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.player-status-lucky {
+    -fx-text-fill: #d7ffd0;
+    -fx-background-color: rgba(80, 180, 90, 0.28);
+}
+.player-status-exp {
+    -fx-text-fill: #ffe9a8;
+    -fx-background-color: rgba(220, 170, 40, 0.28);
+}
+
+/* ---------------- 金币商城（阶段 14） ---------------- */
+.player-shop {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-radius: 16;
+    -fx-padding: 12 18 12 18;
+}
+.player-shop-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+.player-shop-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-shop-list {
+    -fx-padding: 0 2 0 0;
+}
+.player-shop-row {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-padding: 6 12 6 12;
+}
+.player-shop-icon {
+    -fx-font-size: 16px;
+}
+.player-shop-name {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.9);
+}
+.player-shop-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+}
+.player-shop-price {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd75e;
+}
+.player-shop-buy {
+    -fx-background-radius: 10;
+    -fx-padding: 5 14 5 14;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3a2a08;
+    -fx-background-color: linear-gradient(to bottom, #ffe08a, #f5b73c);
+    -fx-cursor: hand;
+}
+.player-shop-buy:hover {
+    -fx-background-color: linear-gradient(to bottom, #fff0b0, #ffc94f);
+}
+
+
+/* ---------------- 小节标题 ---------------- */
+.player-section {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 230, 160, 0.85);
+}
+
+/* ---------------- 数据格子：战绩 / 资产 ---------------- */
+.player-stat {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(225, 230, 236, 0.22);
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 12 20 12 20;
+    -fx-min-width: 132px;
+    -fx-alignment: center;
+}
+.player-stat-value {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #fff3c4;
+}
+.player-stat-key {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245, 248, 243, 0.62);
+}
+.player-stat-win .player-stat-value {
+    -fx-text-fill: #7ee787;
+}
+.player-stat-lose .player-stat-value {
+    -fx-text-fill: #ff9f9f;
+}
+.player-stat-rate .player-stat-value {
+    -fx-text-fill: #9fd8ff;
+}
+.player-stat-streak .player-stat-value {
+    -fx-text-fill: #ffd54f;
+}
+.player-stat-gold .player-stat-value {
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ---------------- 数据中心（阶段 19） ---------------- */
+/* 深色圆角卡片 + 金边，与个人中心其它分区同一套语言 */
+.player-statistics {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 213, 79, 0.28);
+    -fx-border-radius: 16;
+    -fx-padding: 12 18 12 18;
+}
+.player-statistics-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+.player-statistics-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-statistics-list {
+    -fx-padding: 0 2 0 0;
+}
+/* 一行：左侧键、右侧值 */
+.player-stat-row {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10;
+    -fx-padding: 7 14 7 14;
+}
+/* 作用域限定在数据中心：值用 15px，避免复用战绩格子 22px 的大号样式 */
+.player-statistics .player-stat-value {
+    -fx-font-size: 15px;
+}
+/* 金色强调（胜率 / 最常游戏等关键值） */
+.player-stat-highlight {
+    -fx-text-fill: #ffd54f;
+    -fx-font-weight: bold;
+}
+.player-statistics .player-stat-value.player-stat-highlight {
+    -fx-text-fill: #ffd54f;
+}
+
+/* ---------------- 成就预留区 ---------------- */
+.player-achievement {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(225, 230, 236, 0.28);
+    -fx-border-radius: 14;
+    -fx-border-width: 1.2;
+    -fx-border-style: dashed;
+    -fx-padding: 18 24 18 24;
+}
+.player-achievement-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.55);
+}
+/* 个人中心滚动容器：保持背景美术可见（透明化滚动面板与视口） */
+.player-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+.player-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+/* 成就列表（阶段 11）：已解锁高亮，未解锁置灰 */
+.player-achievement-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+.player-achievement-progress {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.75);
+}
+/* 最近获得成就（阶段 12）：高亮一行，未解锁时显示"暂无" */
+.player-achievement-latest {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+    -fx-padding: 2 0 2 0;
+}
+.player-achievement-locked {
+    -fx-border-style: solid;
+}
+.player-achievement-locked .player-achievement-title {
+    -fx-text-fill: rgba(245, 248, 243, 0.88);
+}
+/* 成就列表行比占位块更紧凑：6 行也能一屏放下 */
+.player-achievement-list .player-achievement {
+    -fx-padding: 10 18 10 18;
+    -fx-border-style: solid;
+    -fx-border-color: rgba(225, 230, 236, 0.18);
+}
+.player-achievement-list .player-achievement-title {
+    -fx-text-fill: #ffe9a8;
+}
+/* 牌局结算卡片上的"成就解锁"提示 */
+.growth-result-achievement {
+    -fx-font-size: 13px;
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ==================== 登录页 / 账号管理（阶段 16） ==================== */
+
+.login-view {
+    -fx-background-color:
+        radial-gradient(center 50% 0%, radius 140%, #2f5440 0%, #1c3a2a 45%, #0f1f15 100%);
+}
+
+/* 登录卡片：墨绿半透明底 + 金边，与首页/个人中心同一套语言 */
+.login-card {
+    -fx-background-color: rgba(12, 28, 20, 0.82);
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: rgba(255, 213, 79, 0.55);
+    -fx-border-width: 1.4;
+    -fx-padding: 30 34 30 34;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 26, 0.35, 0, 8);
+}
+
+.login-field-key {
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(245, 248, 243, 0.80);
+}
+
+.login-field {
+    -fx-pref-height: 38px;
+    -fx-font-size: 15px;
+    -fx-background-radius: 8;
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-text-fill: #22301f;
+    -fx-prompt-text-fill: rgba(52, 68, 52, 0.45);
+    -fx-border-color: rgba(255, 213, 79, 0.35);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+.login-field:focused {
+    -fx-border-color: #ffd54f;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.35), 12, 0.3, 0, 0);
+}
+
+/* 登录页两枚按钮：覆盖 menu-btn-start 的首页大尺寸，收敛为卡片内尺寸 */
+.login-btn-login {
+    -fx-min-width: 128px;
+    -fx-min-height: 44px;
+    -fx-font-size: 17px;
+}
+.login-btn-register {
+    -fx-min-width: 128px;
+    -fx-min-height: 44px;
+    -fx-font-size: 16px;
+    -fx-background-color: linear-gradient(to bottom, #2f6140, #1f4528);
+    -fx-text-fill: #ffe9b0;
+    -fx-border-color: rgba(255, 213, 79, 0.8);
+    -fx-border-width: 1.4;
+    -fx-border-radius: 34;
+    -fx-background-radius: 34;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 12, 0.25, 0, 3);
+}
+.login-btn-register:hover {
+    -fx-background-color: linear-gradient(to bottom, #3a7650, #2a5a39);
+    -fx-border-color: #ffd54f;
+    -fx-text-fill: #ffffff;
+}
+.login-btn-register:pressed {
+    -fx-background-color: linear-gradient(to bottom, #1c3c24, #17331f);
+}
+
+.login-actions {
+    -fx-padding: 6 0 0 0;
+}
+
+.login-feedback {
+    -fx-font-size: 13px;
+    -fx-text-fill: #ffb4a2;
+}
+
+.login-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255, 233, 168, 0.72);
+}
+
+/* 个人中心身份区：账号行 + 切换账号 / 退出登录 */
+.player-account-row {
+    -fx-padding: 2 0 2 0;
+}
+.player-account-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+.player-account-btn {
+    -fx-min-height: 26px;
+    -fx-padding: 2 12 2 12;
+    -fx-font-size: 12px;
+    -fx-background-radius: 13;
+    -fx-border-radius: 13;
+    -fx-cursor: hand;
+    -fx-background-color: rgba(255, 213, 79, 0.16);
+    -fx-text-fill: #ffe9a8;
+    -fx-border-color: rgba(255, 213, 79, 0.55);
+    -fx-border-width: 1;
+}
+.player-account-btn:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.30);
+    -fx-text-fill: #ffffff;
+}
+.player-account-btn-quit {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-text-fill: rgba(245, 248, 243, 0.88);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
+}
+.player-account-btn-quit:hover {
+    -fx-background-color: rgba(255, 120, 100, 0.28);
+    -fx-border-color: rgba(255, 150, 130, 0.85);
+    -fx-text-fill: #ffffff;
+}
+
+/* ==================== 战绩系统（阶段 17） ==================== */
+
+/* 首页玩家卡的"胜率"数值 */
+.avatar-winrate-value {
+    -fx-text-fill: #a8e6c1;
+}
+
+/* 最近战绩区 */
+.player-record {
+    -fx-max-width: 720px;
+}
+.player-record-summary {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(255, 233, 168, 0.85);
+    -fx-padding: 0 0 2 2;
+}
+.player-record-scroll {
+    -fx-background-color: rgba(0, 0, 0, 0.16);
+    -fx-background: transparent;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 213, 79, 0.18);
+    -fx-border-width: 1;
+    -fx-padding: 8;
+    -fx-max-width: 720px;
+}
+.player-record-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-record-list {
+    -fx-padding: 0 2 0 0;
+}
+.player-record-row {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-padding: 7 12 7 12;
+}
+.player-record-type {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 248, 243, 0.92);
+}
+.player-record-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(245, 248, 243, 0.42);
+}
+.player-record-result {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 10;
+}
+.player-record-win {
+    -fx-text-fill: #b8f2c9;
+    -fx-background-color: rgba(90, 210, 130, 0.16);
+}
+.player-record-lose {
+    -fx-text-fill: #ffb4a2;
+    -fx-background-color: rgba(255, 130, 100, 0.14);
+}
+.player-record-gold {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.player-record-gain {
+    -fx-text-fill: #ffe9a8;
+}
+.player-record-cost {
+    -fx-text-fill: #ffb4a2;
+}
+.player-record-exp {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(168, 230, 193, 0.75);
+}
+.player-record-empty {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+    -fx-padding: 4 0 4 0;
+}
+
+/* ---------------- 排行榜（阶段 18） ---------------- */
+.player-ranking {
+    -fx-max-width: 720px;
+}
+.player-ranking-scroll {
+    -fx-background-color: rgba(0, 0, 0, 0.16);
+    -fx-background: transparent;
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.10);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 6;
+    -fx-max-width: 720px;
+}
+.player-ranking-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.player-ranking-list {
+    -fx-padding: 0 2 0 0;
+}
+.player-ranking-row {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-padding: 7 12 7 12;
+}
+.player-ranking-medal {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255, 233, 168, 0.9);
+}
+.player-ranking-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 248, 243, 0.92);
+}
+.player-ranking-level {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(168, 230, 193, 0.9);
+    -fx-min-width: 52px;
+}
+.player-ranking-gold {
+    -fx-font-size: 12px;
+    -fx-text-fill: #ffe9a8;
+    -fx-min-width: 86px;
+}
+.player-ranking-rate {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.72);
+    -fx-min-width: 78px;
+}
+.player-ranking-wins {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.72);
+    -fx-min-width: 66px;
+}
+.player-ranking-empty {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+    -fx-padding: 6 0 6 2;
+}
+/* 前三名特殊样式：金 / 银 / 铜描边 */
+.player-ranking-top1 {
+    -fx-background-color: linear-gradient(to right, rgba(255, 213, 79, 0.26), rgba(255, 213, 79, 0.08));
+    -fx-border-color: rgba(255, 213, 79, 0.75);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+.player-ranking-top2 {
+    -fx-background-color: linear-gradient(to right, rgba(214, 222, 235, 0.22), rgba(214, 222, 235, 0.07));
+    -fx-border-color: rgba(214, 222, 235, 0.62);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+.player-ranking-top3 {
+    -fx-background-color: linear-gradient(to right, rgba(226, 160, 96, 0.22), rgba(226, 160, 96, 0.07));
+    -fx-border-color: rgba(226, 160, 96, 0.62);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+.player-ranking-top1 .player-ranking-name,
+.player-ranking-top2 .player-ranking-name,
+.player-ranking-top3 .player-ranking-name {
+    -fx-text-fill: #ffffff;
+}
+/* 自己那一行：金色高亮 + 左侧竖条 */
+.player-ranking-self {
+    -fx-background-color: rgba(255, 213, 79, 0.16);
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 0 0 0 3;
+    -fx-border-radius: 10;
+}
+.player-ranking-self .player-ranking-name {
+    -fx-text-fill: #ffe9a8;
+}
+/* 榜单切换按钮 */
+.player-ranking-tab {
+    -fx-min-height: 24px;
+    -fx-padding: 2 12 2 12;
+    -fx-font-size: 12px;
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-text-fill: rgba(245, 248, 243, 0.88);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.28);
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.player-ranking-tab:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.28);
+    -fx-text-fill: #ffffff;
+}
+.player-ranking-tab-active {
+    -fx-background-color: rgba(255, 213, 79, 0.85);
+    -fx-text-fill: #1f2b21;
+    -fx-border-color: rgba(255, 233, 168, 0.95);
+}
+/* 身份卡内的「我的排名」 */
+.player-rank-row {
+    -fx-padding: 2 0 0 0;
+}
+.player-rank-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+
+/* ==================== 设置中心（阶段 20） ==================== */
+
+/* 中央玻璃卡片列 */
+.settings-center {
+    -fx-background-color: rgba(8, 18, 12, 0.34);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(255, 213, 79, 0.30);
+    -fx-border-radius: 20;
+    -fx-border-width: 1.2;
+    -fx-padding: 20 26 20 26;
+}
+/* 设置卡片：深色圆角 + 金边 */
+.settings-card {
+    -fx-background-color: rgba(10, 24, 16, 0.55);
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(255, 213, 79, 0.28);
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-padding: 12 18 12 18;
+    -fx-min-width: 420px;
+}
+/* 卡片标题（作用域覆盖浅色面板的 .settings-title） */
+.settings-card .settings-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+/* 一行设置：左键右控件 */
+.settings-row {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10;
+    -fx-padding: 7 14 7 14;
+}
+.settings-card .settings-row-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(245, 248, 243, 0.86);
+}
+.settings-card-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.5);
+}
+.settings-account-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe9a8;
+}
+/* 胶囊开关：关=灰、开=金 */
+.settings-toggle {
+    -fx-min-width: 62px;
+    -fx-min-height: 28px;
+    -fx-padding: 2 14 2 14;
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245, 248, 243, 0.75);
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(255, 255, 255, 0.30);
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.settings-toggle:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.28);
+    -fx-text-fill: #ffffff;
+}
+.settings-toggle:selected {
+    -fx-background-color: linear-gradient(to bottom, #ffd54f, #e6b53c);
+    -fx-text-fill: #1f2b21;
+    -fx-border-color: rgba(255, 233, 168, 0.95);
+    -fx-font-weight: bold;
+}
+/* 金色胶囊按钮（账号 / 主题 / 恢复默认） */
+.settings-pill {
+    -fx-min-height: 30px;
+    -fx-padding: 3 16 3 16;
+    -fx-font-size: 13px;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-background-color: rgba(255, 213, 79, 0.16);
+    -fx-text-fill: #ffe9a8;
+    -fx-border-color: rgba(255, 213, 79, 0.55);
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+.settings-pill:hover {
+    -fx-background-color: rgba(255, 213, 79, 0.32);
+    -fx-text-fill: #ffffff;
+}
+.settings-pill-active {
+    -fx-background-color: linear-gradient(to bottom, #ffd54f, #e6b53c);
+    -fx-text-fill: #1f2b21;
+    -fx-font-weight: bold;
+    -fx-border-color: rgba(255, 233, 168, 0.95);
+}
+.settings-pill-danger {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-text-fill: rgba(245, 248, 243, 0.88);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
+}
+.settings-pill-danger:hover {
+    -fx-background-color: rgba(255, 120, 100, 0.28);
+    -fx-border-color: rgba(255, 150, 130, 0.85);
+    -fx-text-fill: #ffffff;
+}
+/* 音量滑块：深色轨道 + 金色滑钮 */
+.settings-card .settings-slider {
+    -fx-pref-width: 220px;
+}
+.settings-card .settings-slider .track {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-background-radius: 4;
+    -fx-pref-height: 8px;
+}
+.settings-card .settings-slider .thumb {
+    -fx-background-color: linear-gradient(to bottom, #ffe08a, #e6b53c);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+}
+.settings-card .settings-slider .thumb:hover {
+    -fx-background-color: #fff3c4;
+}
+
+/* ===================== 阶段 22：游戏表现增强 ===================== */
+
+/* 统一提示条（GameToast） */
+.game-toast {
+    -fx-background-color: linear-gradient(to bottom, rgba(38, 52, 66, 0.96), rgba(22, 33, 44, 0.96));
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(255, 213, 79, 0.85);
+    -fx-border-radius: 22;
+    -fx-border-width: 1;
+    -fx-padding: 8 22 8 22;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 18, 0.25, 0, 4);
+}
+.game-toast-label {
+    -fx-text-fill: #ffe9b0;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* 粒子层：透明、鼠标穿透、不参与布局 */
+.game-particle {
+    -fx-background-color: transparent;
+}
+
+/* 结算胜利强调（🏆 胜利 / 数值） */
+.win-effect {
+    -fx-text-fill: #ffd54f;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.75), 14, 0.35, 0, 0);
+}
+
+/* 升级强调（✨ Level UP） */
+.level-up-effect {
+    -fx-text-fill: #fff3c4;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(255, 233, 168, 0.85), 16, 0.4, 0, 0);
+}
+
+/* 金币飞入（飞行中的金币） */
+.coin-fly {
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.85), 10, 0.4, 0, 0);
+}
+
+/* 升级光环（头像外围金色动画边框） */
+.avatar-glow {
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.9), 18, 0.5, 0, 0);
+}
+
+/* 出牌动画中的卡牌 */
+.card-animation {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 16, 0.35, 0, 6);
+}
+
+/* ================================================================
+   阶段 23：湖南跑得快牌桌重构（中国古风棋牌 + 高级玻璃质感）
+   暗色半透明 / 金色描边 / 圆角卡片 / 层次阴影
+   ================================================================ */
+
+/* 中央牌桌：半透明玻璃层 + 中心暗角 + 边缘金色光线（不覆盖背景） */
+.pdk-table {
+    -fx-background-color: radial-gradient(center 50% 42%, radius 64%,
+            rgba(22, 34, 29, 0.30) 0%,
+            rgba(6, 10, 9, 0.60) 100%);
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(220, 184, 96, 0.40);
+    -fx-border-width: 1.2;
+    -fx-border-radius: 22;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 26, 0.35, 0, 10);
+}
+
+/* 顶部比赛信息栏：深色半透明圆角卡片 + 金色描边 */
+.pdk-info-panel {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(28, 38, 34, 0.74), rgba(12, 18, 16, 0.58));
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(220, 184, 96, 0.38);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-padding: 8 14 8 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0.3, 0, 5);
+}
+
+/* 信息药丸 */
+.pdk-info-chip {
+    -fx-background-color: rgba(0, 0, 0, 0.45);
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(220, 184, 96, 0.42);
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-padding: 4 12 4 12;
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(245, 248, 243, 0.9);
+}
+.pdk-info-mode {
+    -fx-text-fill: #a8e6c1;
+}
+.pdk-info-base {
+    -fx-text-fill: #ffe9a8;
+}
+.pdk-info-round {
+    -fx-text-fill: rgba(245, 248, 243, 0.88);
+}
+.pdk-info-remain {
+    -fx-text-fill: rgba(255, 233, 168, 0.92);
+}
+.pdk-info-aux {
+    -fx-text-fill: #ffab7a;
+}
+
+/* AI 座位条 */
+.pdk-seat-strip {
+    -fx-padding: 2 8 2 8;
+}
+
+/* 玩家座位卡片 */
+.pdk-seat {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(30, 41, 37, 0.62), rgba(12, 18, 16, 0.50));
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(160, 172, 178, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-padding: 8 14 8 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0.3, 0, 5);
+}
+.pdk-seat-active {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(68, 55, 25, 0.62), rgba(26, 22, 10, 0.50));
+    -fx-border-color: rgba(255, 213, 79, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.55), 18, 0.4, 0, 6);
+}
+.pdk-seat-won {
+    -fx-border-color: #ffd54f;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.78), 22, 0.45, 0, 6);
+}
+.pdk-seat-avatar .avatar-circle {
+    -fx-border-color: rgba(160, 172, 178, 0.55);
+    -fx-border-width: 2;
+}
+.pdk-seat-active .pdk-seat-avatar .avatar-circle,
+.pdk-seat-won .pdk-seat-avatar .avatar-circle {
+    -fx-border-color: #ffd54f;
+}
+.pdk-seat-ring {
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.8), 12, 0.4, 0, 0);
+}
+.pdk-seat-level {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+.pdk-seat-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(245, 248, 243, 0.94);
+}
+.pdk-seat-count {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(168, 230, 193, 0.92);
+}
+.pdk-seat-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(255, 233, 168, 0.95);
+}
+/* 底部本人座位：去掉卡片外壳，只留头像 + 文字 */
+.pdk-seat-bottom {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-padding: 0 0 0 4;
+    -fx-min-width: 150;
+}
+
+/* 底部玩家区域 */
+.pdk-bottom {
+    -fx-padding: 4 12 12 12;
+}
+.pdk-hand-row {
+    -fx-padding: 4 0 0 0;
+}
+
+/* 正式棋牌卡：白色卡面 + 圆角 + 阴影 */
+.pdk-card {
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 5;
+    -fx-border-color: rgba(206, 212, 208, 0.32);
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 9, 0.3, 0, 4);
+}
+.pdk-card-hover {
+    -fx-border-color: rgba(255, 233, 168, 0.55);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.62), 14, 0.35, 0, 7);
+}
+.pdk-card-selected {
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 2.4;
+    -fx-border-radius: 5;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.78), 18, 0.45, 0, 10);
+}
+
+/* 中央出牌区 + 半透明状态提示卡 */
+.pdk-center {
+    -fx-padding: 6;
+}
+.pdk-status-card {
+    -fx-background-color: rgba(0, 0, 0, 0.45);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(220, 184, 96, 0.60);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 7 22 7 22;
+    -fx-font-size: 13px;
+    -fx-text-fill: #ffe9a8;
+}
+
+/* 操作按钮：圆角 40px */
+.pdk-action-bar {
+    -fx-padding: 4 0 0 0;
+}
+.pdk-action-button {
+    -fx-min-height: 42px;
+    -fx-background-radius: 40;
+    -fx-border-radius: 40;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+/* 不出：灰色玻璃效果 */
+.pdk-action-pass {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(102, 114, 118, 0.58), rgba(46, 54, 56, 0.58));
+    -fx-text-fill: rgba(245, 248, 243, 0.92);
+    -fx-border-color: rgba(184, 194, 199, 0.50);
+    -fx-border-width: 1;
+}
+/* 出牌：金色主按钮 + 发光 */
+.pdk-action-play {
+    -fx-background-color: linear-gradient(to bottom, #ffe49a, #f0b429 55%, #c98f18);
+    -fx-text-fill: #2a1d05;
+    -fx-border-color: rgba(255, 236, 179, 0.9);
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(255, 193, 60, 0.60), 16, 0.4, 0, 4);
+}
+/* 不可用：透明度 50% */
+.pdk-action-button:disabled {
+    -fx-opacity: 0.5;
+    -fx-effect: null;
+}
+/* 金色描边工具类 */
+.pdk-gold-border {
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 1.4;
+    -fx-border-radius: 14;
+}
+
+/* ================================================================
+   阶段 24：骗子酒馆专属 UI（酒馆玻璃 + 黑色 / 暗红 / 金色）
+   全部前缀 liar-*，不与 pdk-* 冲突
+   ================================================================ */
+.liar-root {
+    -fx-background-color: transparent;
+}
+
+/* 顶部信息栏：深色酒馆玻璃 + 金边 */
+.liar-header {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(30, 20, 18, 0.80), rgba(12, 8, 8, 0.62));
+    -fx-background-radius: 16;
+    -fx-border-color: rgba(198, 156, 74, 0.42);
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-padding: 8 14 8 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 16, 0.3, 0, 6);
+}
+.liar-chip-phase,
+.liar-chip-life,
+.liar-chip-tip {
+    -fx-background-color: rgba(0, 0, 0, 0.48);
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(198, 156, 74, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-padding: 3 11 3 11;
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(246, 238, 226, 0.92);
+}
+.liar-chip-life {
+    -fx-text-fill: #ff9b8f;
+}
+.liar-chip-tip {
+    -fx-text-fill: #ffd98a;
+}
+
+/* ---------------- 酒馆桌面 ---------------- */
+.liar-table {
+    -fx-background-color: radial-gradient(center 50% 45%, radius 62%,
+            rgba(46, 22, 20, 0.42) 0%,
+            rgba(8, 6, 6, 0.68) 100%);
+    -fx-background-radius: 24;
+    -fx-border-color: rgba(198, 156, 74, 0.42);
+    -fx-border-width: 1.3;
+    -fx-border-radius: 24;
+    -fx-padding: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.68), 28, 0.36, 0, 12);
+}
+
+/* ---------------- 玩家座位 ---------------- */
+.liar-seat {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(44, 30, 28, 0.68), rgba(14, 10, 10, 0.54));
+    -fx-background-radius: 15;
+    -fx-border-color: rgba(160, 140, 130, 0.34);
+    -fx-border-width: 1;
+    -fx-border-radius: 15;
+    -fx-padding: 9 15 9 11;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.52), 13, 0.3, 0, 5);
+}
+.liar-seat-self {
+    -fx-border-color: rgba(255, 213, 79, 0.55);
+}
+.liar-seat-live {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(74, 56, 24, 0.66), rgba(28, 20, 10, 0.54));
+    -fx-border-color: rgba(255, 213, 79, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.52), 18, 0.4, 0, 6);
+}
+.liar-seat-bluff {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(88, 32, 28, 0.70), rgba(30, 12, 10, 0.56));
+    -fx-border-color: rgba(224, 87, 79, 0.90);
+    -fx-effect: dropshadow(gaussian, rgba(224, 87, 79, 0.62), 20, 0.44, 0, 6);
+}
+.liar-seat-dead {
+    -fx-background-color: rgba(18, 16, 16, 0.52);
+    -fx-border-color: rgba(120, 112, 108, 0.30);
+    -fx-effect: null;
+}
+.liar-seat-lowlife {
+    -fx-border-color: rgba(224, 87, 79, 0.72);
+}
+.liar-seat-avatar .avatar-circle {
+    -fx-border-color: rgba(168, 150, 140, 0.55);
+    -fx-border-width: 2;
+}
+.liar-seat-live .liar-seat-avatar .avatar-circle {
+    -fx-border-color: #ffd54f;
+}
+.liar-seat-bluff .liar-seat-avatar .avatar-circle {
+    -fx-border-color: #e0574f;
+}
+.liar-seat-ring {
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.78), 12, 0.4, 0, 0);
+}
+.liar-seat-level {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+.liar-seat-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(248, 240, 232, 0.95);
+}
+.liar-seat-life {
+    -fx-font-size: 11px;
+}
+.liar-seat-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(255, 217, 138, 0.95);
+}
+
+/* ---------------- 隐藏手牌（牌背） ---------------- */
+.liar-hand {
+    -fx-padding: 2 0 0 0;
+}
+.liar-hand-row {
+    -fx-padding: 6 0 0 0;
+}
+.liar-card-back {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(58, 28, 26, 0.95), rgba(22, 12, 12, 0.95));
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(198, 156, 74, 0.50);
+    -fx-border-width: 1.2;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.58), 10, 0.32, 0, 4);
+}
+.liar-card-back-glyph {
+    -fx-font-size: 40px;
+    -fx-text-fill: rgba(198, 156, 74, 0.62);
+}
+.liar-card-back-mark {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(198, 156, 74, 0.55);
+    -fx-padding: 0 0 5 0;
+}
+.liar-card-back-hover {
+    -fx-border-color: rgba(255, 233, 168, 0.60);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.64), 15, 0.36, 0, 7);
+}
+.liar-card-back-selected {
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 2.4;
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(92, 46, 30, 0.98), rgba(38, 18, 14, 0.98));
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.78), 18, 0.45, 0, 9);
+}
+
+/* ---------------- 本人手牌（正面可见） ---------------- */
+.liar-card-face {
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: rgba(198, 156, 74, 0.45);
+    -fx-border-width: 1.2;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.58), 10, 0.32, 0, 4);
+}
+.liar-card-face-hover {
+    -fx-border-color: rgba(255, 233, 168, 0.65);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.64), 15, 0.36, 0, 7);
+}
+.liar-card-face-selected {
+    -fx-border-color: #ffd54f;
+    -fx-border-width: 2.4;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.78), 18, 0.45, 0, 9);
+}
+
+/* ---------------- 操作按钮 ---------------- */
+.liar-action-bar {
+    -fx-padding: 6 0 0 0;
+}
+.liar-action-btn {
+    -fx-min-height: 44px;
+    -fx-background-radius: 40;
+    -fx-border-radius: 40;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+/* 继续：灰色酒馆玻璃 */
+.liar-action {
+    -fx-background-color: linear-gradient(to bottom,
+            rgba(112, 104, 100, 0.58), rgba(48, 44, 42, 0.58));
+    -fx-text-fill: rgba(246, 240, 234, 0.94);
+    -fx-border-color: rgba(186, 176, 168, 0.48);
+    -fx-border-width: 1;
+}
+/* 宣告：金色主按钮 */
+.liar-action-primary {
+    -fx-background-color: linear-gradient(to bottom, #ffe49a, #f0b429 55%, #c98f18);
+    -fx-text-fill: #2a1d05;
+    -fx-border-color: rgba(255, 236, 179, 0.9);
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(255, 193, 60, 0.58), 16, 0.4, 0, 4);
+}
+/* 质疑：红色危险按钮 */
+.liar-danger-btn {
+    -fx-background-color: linear-gradient(to bottom, #e8604f, #b8291d 60%, #8a1a12);
+    -fx-text-fill: #fff3ef;
+    -fx-border-color: rgba(255, 170, 158, 0.85);
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(224, 60, 44, 0.62), 18, 0.44, 0, 4);
+}
+.liar-action-btn:disabled {
+    -fx-opacity: 0.45;
+    -fx-effect: null;
+}
+
+/* ---------------- 声明面板 ---------------- */
+.liar-claim {
+    -fx-background-color: rgba(0, 0, 0, 0.50);
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(198, 156, 74, 0.62);
+    -fx-border-width: 1.2;
+    -fx-border-radius: 14;
+    -fx-padding: 10 26 10 26;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 16, 0.32, 0, 6);
+}
+.liar-claim-compact {
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-effect: null;
+}
+.liar-claim-declarer {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(246, 238, 226, 0.88);
+}
+.liar-claim-text {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd98a;
+}
+.liar-claim-compact .liar-claim-text {
+    -fx-font-size: 13px;
+}
+.liar-claim-cred {
+    -fx-font-size: 11px;
+}
+.liar-claim-cred-unknown {
+    -fx-text-fill: rgba(200, 194, 186, 0.85);
+}
+.liar-claim-cred-high {
+    -fx-text-fill: #a8e6c1;
+}
+.liar-claim-cred-low {
+    -fx-text-fill: #ff9b8f;
+}
+.liar-claim-challenged {
+    -fx-border-color: #e0574f;
+    -fx-effect: dropshadow(gaussian, rgba(224, 87, 79, 0.85), 22, 0.5, 0, 0);
+}
+
+/* ---------------- 怀疑度指示器 ---------------- */
+.liar-risk {
+    -fx-padding: 2 4 2 4;
+}
+.liar-risk-title {
+    -fx-font-size: 11px;
+    -fx-text-fill: rgba(246, 238, 226, 0.80);
+}
+.liar-risk-percent {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd98a;
+}
+.liar-risk-bar {
+    -fx-padding: 0;
+}
+.liar-risk-block {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(120, 108, 102, 0.42);
+}
+.liar-risk-block-on {
+    -fx-text-fill: #d8a13c;
+}
+.liar-risk-block-high {
+    -fx-text-fill: #e0574f;
+}
+.liar-risk-mid .liar-risk-percent {
+    -fx-text-fill: #d8a13c;
+}
+.liar-risk-high .liar-risk-percent {
+    -fx-text-fill: #ff8b7d;
+}
+
+/* ---------------- 底部 / 日志 / 特效层 ---------------- */
+.liar-bottom {
+    -fx-padding: 6 12 12 12;
+}
+.liar-log {
+    -fx-background-color: rgba(0, 0, 0, 0.34);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(198, 156, 74, 0.30);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-font-size: 12px;
+}
+.liar-fx-layer {
+    -fx-background-color: transparent;
+}
+.liar-danger-flash {
+    -fx-background-color: radial-gradient(center 50% 50%, radius 70%,
+            rgba(190, 34, 26, 0.72) 0%,
+            rgba(120, 12, 8, 0.42) 100%);
+    -fx-background-radius: 24;
+}
+.liar-victory-glow {
+    -fx-background-color: radial-gradient(center 50% 50%, radius 72%,
+            rgba(255, 213, 79, 0.42) 0%,
+            rgba(255, 193, 60, 0.06) 100%);
+    -fx-background-radius: 24;
+}
+
+
+
