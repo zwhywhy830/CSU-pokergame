@@ -5,36 +5,38 @@ import com.cards.ui.ParticleField;
 import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.effect.GameAnimationService;
-import com.csu.pokergame.core.engine.PlayerId;
 import com.csu.pokergame.network.GameType;
 import com.csu.pokergame.network.LanClient;
 import com.csu.pokergame.network.LanHost;
-import com.csu.pokergame.network.RoomPlayer;
 import com.csu.pokergame.network.RoomSnapshot;
 import com.csu.pokergame.ui.AppShell;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 /**
- * 局域网联机大厅：两张卡片（创建房间 / 加入房间）。
- * 创建房间后显示主机地址、端口与已加入玩家列表，人数齐时启用“开始游戏”。
- * 加入房间后输入主机 IPv4，等待主机开始。
+ * 局域网联机大厅：单列布局（标题 + 副标题 + 创建/IP/加入一行 + IP 提示 + 玩家列表 + 开始按钮）。
  *
- * <p>从 DeckApp.buildLanLobbyScene 改造而来：不再自建 {@link javafx.scene.Scene}，
- * 而是直接继承 {@link StackPane}，由 {@link AppShell} 统一装进单一 Scene；
- * 背景、四角花色水印、点击音效、按钮反馈全部复用 {@link LobbyHelper} 与
- * {@link BackgroundManager}，CSS 由全局样式表负责。
+ * <p>对齐 DeckApp.buildLanLobbyScene 的简化版式：不再使用两张卡片，
+ * 而是把「创建房间」按钮、IP 输入框、「加入房间」按钮放进同一个 HBox；
+ * 游戏类型由 {@link GameChoiceView#SELECTED_GAME} 决定（在更上一页已选定），
+ * 加入流程不再让用户选座位，由主机自动分配（{@link LanClient#join()} 无参重载）。
+ *
+ * <p>主机：点击「创建房间」后显示本机地址、等待玩家加入；房间满员后「开始游戏」可用。
+ * 客户端：输入主机 IP 点击「加入房间」后等待主机开始；开始按钮对客户端不可见。
+ *
+ * <p>背景、四角花色水印、点击音效、按钮反馈全部复用 {@link LobbyHelper} 与
+ * {@link BackgroundManager}，CSS 由 {@link AppShell} 全局样式表负责。
  */
 public final class LanLobbyView extends StackPane {
 
@@ -42,8 +44,16 @@ public final class LanLobbyView extends StackPane {
     private LanClient client;
     private ParticleField particles;
 
-    /** 中央内容容器：初始为「创建 / 加入」两张卡片，进入房间后切换为房间面板。 */
-    private final VBox contentArea = new VBox();
+    /** 复用控件：同一组 UI 同时承担主机/客户端两路流程。 */
+    private final Label ipDisplay = new Label();
+    private final ListView<String> playerList = new ListView<>();
+    private final Button startBtn = new Button("开始游戏");
+    private final Button createBtn = new Button("创建房间");
+    private final Button joinBtn = new Button("加入房间");
+    private final TextField ipField = new TextField();
+
+    private final GameType gameType;
+    private final int requiredPlayers;
 
     public LanLobbyView(AppShell shell) {
         // ---------------- 背景：大厅同源美术层 + 粒子 ----------------
@@ -66,6 +76,12 @@ public final class LanLobbyView extends StackPane {
             }
         });
 
+        // ---------------- 游戏类型：由更上一页 GameChoiceView 选定 ----------------
+        boolean isPdk = "PDK".equals(GameChoiceView.SELECTED_GAME);
+        gameType = isPdk ? GameType.PAO_DE_KUAI : GameType.LIARS_POKER;
+        requiredPlayers = gameType.requiredPlayers();
+        String gameName = isPdk ? "湖南跑得快" : "骗子酒馆";
+
         // ---------------- 顶部条：左返回 / 右设置 ----------------
         Button back = new Button("← 返回模式选择");
         back.getStyleClass().add("game-back");
@@ -86,336 +102,121 @@ public final class LanLobbyView extends StackPane {
         StackPane.setAlignment(settings, Pos.TOP_RIGHT);
         StackPane.setMargin(settings, new Insets(22, 24, 0, 0));
 
-        // ---------------- 中央内容：标题 + 副标题 + 两张卡片 ----------------
-        Label title = new Label("局域网联机");
+        // ---------------- 中央内容：单列布局 ----------------
+        Label title = new Label("局域网联机 · " + gameName);
         title.getStyleClass().add("game-choice-title");
         Label sub = new Label("创建房间成为主机，或输入主机 IP 加入");
         sub.getStyleClass().add("game-choice-sub");
 
-        HBox cards = new HBox(32, createRoomCard(shell), joinRoomCard(shell));
-        cards.setAlignment(Pos.CENTER);
-        cards.setPadding(new Insets(0, 48, 0, 48));
-        HBox.setHgrow(cards.getChildren().get(0), Priority.ALWAYS);
-        HBox.setHgrow(cards.getChildren().get(1), Priority.ALWAYS);
+        createBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
+        ipField.setPromptText("主机 IP，如 192.168.1.100");
+        ipField.getStyleClass().add("lan-ip-field");
+        ipField.setPrefWidth(220);
+        joinBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
 
-        contentArea.setAlignment(Pos.CENTER);
-        contentArea.setPadding(new Insets(48, 16, 16, 16));
-        contentArea.getChildren().addAll(title, sub, cards);
-        StackPane.setAlignment(contentArea, Pos.CENTER);
+        HBox row = new HBox(16, createBtn, ipField, joinBtn);
+        row.setAlignment(Pos.CENTER);
 
-        getChildren().addAll(contentArea, back, settings);
+        ipDisplay.getStyleClass().add("game-choice-sub");
+
+        playerList.getStyleClass().add("table-log");
+        playerList.setPrefHeight(170);
+        playerList.setMaxWidth(420);
+
+        startBtn.getStyleClass().addAll("menu-btn", "menu-btn-start");
+        startBtn.setVisible(false);
+
+        VBox center = new VBox(26, title, sub, row, ipDisplay, playerList, startBtn);
+        center.setAlignment(Pos.CENTER);
+        StackPane.setAlignment(center, Pos.CENTER);
+
+        getChildren().addAll(center, back, settings);
+
+        // ---------------- 行为：创建 / 加入 / 开始 ----------------
+        createBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            try {
+                host = new LanHost(gameType);
+                host.setOnRoomUpdate(snapshot -> Platform.runLater(() -> updateLobbyRoom(snapshot)));
+                host.setOnEnded(reason -> Platform.runLater(() -> {
+                    shutdownAll();
+                    ipDisplay.setText("对局结束：" + reason);
+                }));
+                ipDisplay.setText("本机 " + host.localAddress() + ":" + host.port()
+                        + "，等待 " + (requiredPlayers - 1) + " 人加入");
+                host.broadcastRoom();
+                createBtn.setDisable(true);
+            } catch (Exception ex) {
+                ipDisplay.setText("创建房间失败：" + ex.getMessage());
+            }
+        });
+
+        joinBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            String ip = ipField.getText().trim();
+            if (ip.isEmpty()) {
+                ipDisplay.setText("请输入主机 IP");
+                return;
+            }
+            client = new LanClient(ip);
+            client.setOnRoomUpdate(snapshot -> Platform.runLater(() -> updateLobbyRoom(snapshot)));
+            client.setOnStartGame((type, seat) -> Platform.runLater(() -> {
+                shell.register("lan-client-table", () -> new LanGameTableView(shell, client, type, seat, ip));
+                shell.navigate("lan-client-table");
+            }));
+            client.setOnEnded(reason -> Platform.runLater(() -> {
+                shutdownAll();
+                String msg = "HOST_DISCONNECTED".equals(reason) ? "主机已关闭" : "对局结束：" + reason;
+                ipDisplay.setText(msg);
+            }));
+            client.setOnError(code -> Platform.runLater(() -> {
+                shutdownAll();
+                String msg = switch (code) {
+                    case "SEAT_TAKEN" -> "该座位已被占用，请重新加入";
+                    case "SEAT_RESERVED_HOST" -> "1 号位是主机座位，请重新加入";
+                    case "SEAT_INVALID" -> "该座位在此游戏类型中无效，请重新加入";
+                    case "ROOM_FULL" -> "房间已满";
+                    default -> "错误：" + code;
+                };
+                ipDisplay.setText(msg);
+            }));
+            client.join(); // 不指定座位，由主机自动分配
+            joinBtn.setDisable(true);
+            ipDisplay.setText("正在连接 " + ip + " …");
+        });
+
+        startBtn.setOnAction(e -> {
+            LobbyHelper.clickSound();
+            try {
+                if (host != null) {
+                    host.startGame();
+                    shell.register("lan-host-table", () -> new LanGameTableView(shell, host));
+                    shell.navigate("lan-host-table");
+                }
+            } catch (Exception ex) {
+                // 不应发生：按钮在房间未满时禁用
+                ipDisplay.setText(ex.getMessage());
+            }
+        });
 
         // 统一为按钮叠加悬浮反馈（不覆盖各自 setOnAction）
         GameAnimationService.getInstance().installButtonFeedback(this);
     }
 
-    // ============================================================= 创建房间卡片
-
-    private VBox createRoomCard(AppShell shell) {
-        VBox card = new VBox(10);
-        card.getStyleClass().add("game-card");
-        card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(280);
-
-        Label title = new Label("创建房间");
-        title.getStyleClass().add("title");
-        Label desc = new Label("作为主机创建房间，等待其他玩家加入");
-        desc.getStyleClass().add("desc");
-        desc.setWrapText(true);
-        desc.setPrefWidth(240);
-        desc.setAlignment(Pos.CENTER);
-
-        // 游戏类型选择
-        ToggleButton pdkBtn = new ToggleButton("跑得快 (3 人)");
-        ToggleButton liarBtn = new ToggleButton("骗子酒馆 (4 人)");
-        pdkBtn.setSelected(true);
-        pdkBtn.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            pdkBtn.setSelected(true);
-            liarBtn.setSelected(false);
-        });
-        liarBtn.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            liarBtn.setSelected(true);
-            pdkBtn.setSelected(false);
-        });
-        HBox gameTypes = new HBox(8, pdkBtn, liarBtn);
-        gameTypes.setAlignment(Pos.CENTER);
-
-        Button create = new Button("创建");
-        create.getStyleClass().add("primary");
-        create.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            GameType type = pdkBtn.isSelected() ? GameType.PAO_DE_KUAI : GameType.LIARS_POKER;
-            openHostRoom(shell, type);
-        });
-
-        card.getChildren().addAll(title, desc, gameTypes, create);
-        return card;
+    /** 主机/客户端共用：刷新玩家列表 + 同步开始按钮可见性/可用性。 */
+    private void updateLobbyRoom(RoomSnapshot snapshot) {
+        var items = snapshot.players().stream()
+                .map(p -> p.displayName() + (p.host() ? "（主机）" : "")
+                        + (p.connected() ? "  ●" : "  ○"))
+                .toList();
+        playerList.setItems(FXCollections.observableArrayList(items));
+        boolean isHost = host != null;
+        startBtn.setVisible(isHost);
+        startBtn.setDisable(!snapshot.full());
+        startBtn.setText(snapshot.full() ? "开始游戏" : "等待 (" + requiredPlayers + "人)");
     }
 
-    // ============================================================= 加入房间卡片
-
-    private VBox joinRoomCard(AppShell shell) {
-        VBox card = new VBox(10);
-        card.getStyleClass().add("game-card");
-        card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(280);
-
-        Label title = new Label("加入房间");
-        title.getStyleClass().add("title");
-        Label desc = new Label("输入主机 IPv4 地址，选择座位加入房间");
-        desc.getStyleClass().add("desc");
-        desc.setWrapText(true);
-        desc.setPrefWidth(240);
-        desc.setAlignment(Pos.CENTER);
-
-        TextField ipField = new TextField();
-        ipField.setPromptText("如 192.168.1.10");
-        ipField.setPrefWidth(200);
-        ipField.getStyleClass().add("lan-ip-field");
-
-        Label seatLabel = new Label("选择座位：");
-        seatLabel.getStyleClass().add("desc");
-        ToggleButton seat2 = new ToggleButton("2 号");
-        ToggleButton seat3 = new ToggleButton("3 号");
-        ToggleButton seat4 = new ToggleButton("4 号");
-        javafx.scene.control.ToggleGroup seatGroup = new javafx.scene.control.ToggleGroup();
-        seat2.setToggleGroup(seatGroup);
-        seat3.setToggleGroup(seatGroup);
-        seat4.setToggleGroup(seatGroup);
-        seat2.setUserData(PlayerId.SEAT_2);
-        seat3.setUserData(PlayerId.SEAT_3);
-        seat4.setUserData(PlayerId.SEAT_4);
-        seat2.setOnAction(e -> LobbyHelper.clickSound());
-        seat3.setOnAction(e -> LobbyHelper.clickSound());
-        seat4.setOnAction(e -> LobbyHelper.clickSound());
-        HBox seatRow = new HBox(8, seat2, seat3, seat4);
-        seatRow.setAlignment(Pos.CENTER);
-
-        Button join = new Button("加入");
-        join.getStyleClass().add("primary");
-        join.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            String ip = ipField.getText().trim();
-            if (ip.isEmpty()) {
-                return;
-            }
-            javafx.scene.control.Toggle selected = seatGroup.getSelectedToggle();
-            if (selected == null) {
-                return; // 未选座位，提示由用户重新点
-            }
-            PlayerId seat = (PlayerId) selected.getUserData();
-            openClientRoom(shell, ip, seat);
-        });
-
-        card.getChildren().addAll(title, desc, ipField, seatLabel, seatRow, join);
-        return card;
-    }
-
-    // ============================================================= 主机房间面板
-
-    private void openHostRoom(AppShell shell, GameType type) {
-        try {
-            host = new LanHost(type);
-        } catch (Exception ex) {
-            showHostFailed(shell, "创建主机失败:" + ex.getMessage());
-            return;
-        }
-
-        VBox roomBox = new VBox(12);
-        roomBox.setAlignment(Pos.CENTER);
-        roomBox.setPadding(new Insets(48, 16, 16, 16));
-
-        Label title = new Label("等待玩家加入");
-        title.getStyleClass().add("game-choice-title");
-
-        Label addr = new Label("主机地址:" + host.localAddress() + ":" + host.port());
-        addr.getStyleClass().add("status-label");
-
-        VBox playersBox = new VBox(6);
-        Label playersTitle = new Label("座位状态（点空位加机器人，点机器人移除）");
-        playersTitle.getStyleClass().add("section-label");
-
-        Button startBtn = new Button("开始游戏");
-        startBtn.getStyleClass().add("primary");
-        startBtn.setDisable(true);
-        startBtn.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            try {
-                host.startGame();
-                shell.register("lan-host-table", () -> new LanGameTableView(shell, host));
-                shell.navigate("lan-host-table");
-            } catch (Exception ex) {
-                // 不应发生，因为按钮 disable
-            }
-        });
-
-        Button cancel = new Button("取消并返回");
-        cancel.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            shutdownAll();
-            shell.navigate("lan-lobby");
-        });
-
-        roomBox.getChildren().addAll(title, addr, playersTitle, playersBox, startBtn, cancel);
-        contentArea.getChildren().setAll(roomBox);
-
-        host.setOnRoomUpdate(snapshot -> Platform.runLater(() -> {
-            renderHostPlayersBox(shell, snapshot, playersBox);
-            startBtn.setDisable(!snapshot.full());
-        }));
-
-        host.setOnEnded(reason -> Platform.runLater(() -> {
-            shutdownAll();
-            shell.navigate("lan-lobby");
-        }));
-
-        // 触发首次广播
-        host.broadcastRoom();
-    }
-
-    /** 渲染主机大厅的座位列表：主机/真人/机器人/空位 各有不同标签和按钮。 */
-    private void renderHostPlayersBox(AppShell shell, RoomSnapshot snapshot, VBox playersBox) {
-        playersBox.getChildren().clear();
-        for (RoomPlayer p : snapshot.players()) {
-            int seatNum = p.seat().ordinal() + 1;
-            HBox row = new HBox(8);
-            row.setAlignment(Pos.CENTER_LEFT);
-            String tag;
-            if (p.host()) {
-                tag = "（主机）";
-            } else if (p.bot()) {
-                tag = "[AI]";
-            } else if (p.connected()) {
-                tag = "（已连接）";
-            } else {
-                tag = "（空位）";
-            }
-            Label label = new Label(seatNum + "号 · " + (p.displayName() == null ? "空位" : p.displayName()) + " " + tag);
-            label.getStyleClass().add("seat-status");
-            row.getChildren().add(label);
-
-            if (!p.connected() && !p.bot()) {
-                // 空位 → 加机器人按钮
-                Button addBot = new Button("加机器人");
-                addBot.getStyleClass().add("primary");
-                addBot.setOnAction(e -> {
-                    LobbyHelper.clickSound();
-                    try {
-                        host.addBot(p.seat());
-                    } catch (Exception ex) {
-                        // 超过上限等，忽略；UI 会通过下一次 snapshot 刷新
-                    }
-                });
-                row.getChildren().add(addBot);
-            } else if (p.bot()) {
-                // 机器人 → 移除按钮
-                Button removeBot = new Button("移除");
-                removeBot.getStyleClass().add("danger");
-                removeBot.setOnAction(e -> {
-                    LobbyHelper.clickSound();
-                    host.removeBot(p.seat());
-                });
-                row.getChildren().add(removeBot);
-            }
-            playersBox.getChildren().add(row);
-        }
-    }
-
-    // ============================================================= 客户端加入面板
-
-    private void openClientRoom(AppShell shell, String hostIp, PlayerId requestedSeat) {
-        client = new LanClient(hostIp);
-
-        VBox roomBox = new VBox(12);
-        roomBox.setAlignment(Pos.CENTER);
-        roomBox.setPadding(new Insets(48, 16, 16, 16));
-
-        Label title = new Label("已加入房间,等待主机开始");
-        title.getStyleClass().add("game-choice-title");
-
-        Label status = new Label("连接中...");
-        status.getStyleClass().add("status-label");
-
-        VBox playersBox = new VBox(6);
-        Label playersTitle = new Label("房间玩家");
-        playersTitle.getStyleClass().add("section-label");
-
-        Button leave = new Button("离开房间");
-        leave.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            shutdownAll();
-            shell.navigate("lan-lobby");
-        });
-
-        roomBox.getChildren().addAll(title, status, playersTitle, playersBox, leave);
-        contentArea.getChildren().setAll(roomBox);
-
-        client.setOnRoomUpdate(snapshot -> Platform.runLater(() -> {
-            playersBox.getChildren().clear();
-            for (RoomPlayer p : snapshot.players()) {
-                int seatNum = p.seat().ordinal() + 1;
-                String tag;
-                if (p.host()) {
-                    tag = "（主机）";
-                } else if (p.bot()) {
-                    tag = "[AI]";
-                } else if (p.connected()) {
-                    tag = "（已连接）";
-                } else {
-                    tag = "（空位）";
-                }
-                Label row = new Label(seatNum + "号 · " + (p.displayName() == null ? "空位" : p.displayName()) + " " + tag);
-                row.getStyleClass().add("seat-status");
-                playersBox.getChildren().add(row);
-            }
-            status.setText("等待主机开始游戏 (" + snapshot.players().stream().filter(RoomPlayer::connected).count()
-                    + "/" + snapshot.gameType().requiredPlayers() + ")");
-        }));
-        client.setOnStartGame((type, seat) -> Platform.runLater(() -> {
-            shell.register("lan-client-table", () -> new LanGameTableView(shell, client, type, seat, hostIp));
-            shell.navigate("lan-client-table");
-        }));
-        client.setOnEnded(reason -> Platform.runLater(() -> {
-            shutdownAll();
-            String msg = "HOST_DISCONNECTED".equals(reason) ? "主机已关闭" : "对局结束:" + reason;
-            showHostFailed(shell, msg);
-        }));
-        client.setOnError(code -> Platform.runLater(() -> {
-            shutdownAll();
-            String msg = switch (code) {
-                case "SEAT_TAKEN" -> "该座位已被占用，请返回重新选择";
-                case "SEAT_RESERVED_HOST" -> "1 号位是主机座位，请重新选择";
-                case "SEAT_INVALID" -> "该座位在此游戏类型中无效，请重新选择";
-                case "ROOM_FULL" -> "房间已满";
-                default -> "错误:" + code;
-            };
-            showHostFailed(shell, msg);
-        }));
-
-        client.join(requestedSeat);
-    }
-
-    private void showHostFailed(AppShell shell, String message) {
-        VBox box = new VBox(12);
-        box.setAlignment(Pos.CENTER);
-        box.setPadding(new Insets(48, 16, 16, 16));
-
-        Label title = new Label(message);
-        title.getStyleClass().add("game-choice-title");
-
-        Button back = new Button("返回大厅");
-        back.getStyleClass().add("primary");
-        back.setOnAction(e -> {
-            LobbyHelper.clickSound();
-            shell.navigate("lan-lobby");
-        });
-
-        box.getChildren().addAll(title, back);
-        contentArea.getChildren().setAll(box);
-    }
-
+    /** 关闭主机/客户端连接，并把 UI 恢复到可再次尝试的状态。 */
     private void shutdownAll() {
         if (host != null) {
             host.shutdown();
@@ -425,5 +226,10 @@ public final class LanLobbyView extends StackPane {
             client.shutdown();
             client = null;
         }
+        createBtn.setDisable(false);
+        joinBtn.setDisable(false);
+        startBtn.setVisible(false);
+        startBtn.setDisable(true);
+        startBtn.setText("开始游戏");
     }
 }

@@ -22,10 +22,12 @@ import com.csu.pokergame.paodekuai.PassPdkTurn;
 import com.csu.pokergame.paodekuai.PdkBotPolicy;
 import com.csu.pokergame.paodekuai.PdkEngine;
 import com.csu.pokergame.paodekuai.PdkSnapshot;
+import com.csu.pokergame.paodekuai.PdkMoveType;
 import com.csu.pokergame.paodekuai.PlayPdkCards;
 import com.csu.pokergame.player.CoinService;
 import com.csu.pokergame.ui.AppShell;
 import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -39,6 +41,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -275,9 +278,31 @@ public final class PdkTableView extends BorderPane {
         if (selected.isEmpty()) {
             return;
         }
-        engine.apply(new PlayPdkCards(List.copyOf(selected)));
+        // 记录飞牌起点坐标（手牌节点场景坐标）
+        List<double[]> flyFrom = new ArrayList<>();
+        for (var card : selected) {
+            var node = handView.getCardNode(card);
+            if (node != null) {
+                var b = node.localToScene(node.getBoundsInLocal());
+                flyFrom.add(new double[]{b.getMinX() + b.getWidth() / 2, b.getMinY() + b.getHeight() / 2});
+            }
+        }
+
+        List<Card> playedCards = List.copyOf(selected);
+        engine.apply(new PlayPdkCards(playedCards));
         selected.clear();
         refresh();
+
+        // 飞牌动画：从手牌位置飞向桌面中央（统一走 GameAnimationService，受动画开关控制）
+        if (!flyFrom.isEmpty()) {
+            Platform.runLater(() -> GameAnimationService.getInstance()
+                    .playCardAnimation(() -> tableCards.playFlyIn(playedCards, "你",
+                            flyFrom.get(0)[0], flyFrom.get(0)[1], null), null));
+        }
+        // 出牌成功的小提示，显示牌型（顺子 / 三带一 / 炸弹 …）
+        PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
+        after.lastMove().ifPresent(move ->
+                GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type())));
     }
 
     private void pass() {
@@ -292,8 +317,20 @@ public final class PdkTableView extends BorderPane {
             GameSnapshot snap = engine.snapshotFor(bot);
             List<GameCommand> legal = engine.legalCommands(bot);
             BotDecision decision = bots.get(bot).decide(snap, legal);
+            boolean played = decision.command() instanceof PlayPdkCards;
             engine.apply(decision.command());
             refresh();
+            if (played) {
+                PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
+                after.lastMove().ifPresent(move -> {
+                    double botX = getScene().getWidth() / 2;
+                    double botY = 100;
+                    Platform.runLater(() -> GameAnimationService.getInstance()
+                            .playCardAnimation(() -> tableCards.playFlyIn(move.cards(), name(bot),
+                                    botX, botY, null), null));
+                    GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type()));
+                });
+            }
         });
         pause.play();
     }
@@ -374,6 +411,27 @@ public final class PdkTableView extends BorderPane {
             case SEAT_2 -> "AI1";
             case SEAT_3 -> "AI2";
             case SEAT_4 -> "AI3";
+        };
+    }
+
+    /** 跑得快牌型的中文展示名（表现层映射，不改动规则枚举）。 */
+    private static String moveTypeLabel(PdkMoveType type) {
+        if (type == null) {
+            return "出牌";
+        }
+        return switch (type) {
+            case SINGLE -> "单张";
+            case PAIR -> "对子";
+            case TRIPLE -> "三张";
+            case TRIPLE_WITH_ONE -> "三带一";
+            case TRIPLE_WITH_PAIR -> "三带二";
+            case STRAIGHT -> "顺子";
+            case CONSECUTIVE_PAIRS -> "连对";
+            case TRIPLE_STRAIGHT -> "三顺";
+            case AIRPLANE_WITH_WINGS -> "飞机";
+            case FOUR_WITH_ONE -> "四带一";
+            case FOUR_WITH_THREE -> "四带三";
+            case FOUR_OF_A_KIND -> "💣 炸弹";
         };
     }
 }
