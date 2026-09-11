@@ -18,13 +18,14 @@ import com.csu.pokergame.player.PlayerStatsService;
 import com.csu.pokergame.player.ShopService;
 import com.csu.pokergame.player.StatisticsService;
 import com.csu.pokergame.settings.SettingsService;
-import com.csu.pokergame.ui.scene.GameModeView;
+import com.csu.pokergame.ui.scene.GameChoiceView;
 import com.csu.pokergame.ui.scene.HomeView;
 import com.csu.pokergame.ui.scene.LanLobbyView;
 import com.csu.pokergame.ui.scene.LiarTableView;
-import com.csu.pokergame.ui.scene.LocalGameSelectView;
+import com.csu.pokergame.ui.scene.LoadingView;
+import com.csu.pokergame.ui.scene.ModeChoiceView;
 import com.csu.pokergame.ui.scene.PdkTableView;
-import com.csu.pokergame.ui.scene.RulesView;
+import com.csu.pokergame.ui.scene.ProfileEditView;
 
 /**
  * 路由注册表：集中注册无参数的页面路由。
@@ -76,11 +77,12 @@ public final class RouteTable {
                 () -> shell.navigate("login"),
                 () -> shell.navigate("home")));
 
-        // ===== 加载/入口页 =====
+        // ===== 大厅 / 入口页（deckapp-ui 移植） =====
         shell.register("home", () -> new HomeView(shell));
-        shell.register("game-modes", () -> new GameModeView(shell));
-        shell.register("local-select", () -> new LocalGameSelectView(shell));
-        shell.register("rules", () -> new RulesView(shell));
+        shell.register("loading", () -> new LoadingView(shell));
+        shell.register("game-choice", () -> new GameChoiceView(shell));
+        shell.register("mode-choice", () -> new ModeChoiceView(shell));
+        shell.register("profile-edit", () -> new ProfileEditView(shell));
 
         // ===== 出牌/桌面页 =====
         shell.register("pdk", () -> new PdkTableView(shell));

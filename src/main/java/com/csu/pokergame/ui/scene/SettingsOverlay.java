@@ -38,7 +38,7 @@ public final class SettingsOverlay extends StackPane {
         viewRules.getStyleClass().addAll("primary", "settings-button");
         viewRules.setOnAction(e -> {
             shell.closeSettings();
-            shell.navigate("rules");
+            shell.navigate("home");
         });
 
         Button home = new Button("返回主页");

@@ -37,7 +37,7 @@ public final class LanLobbyView extends BorderPane {
         Button back = new Button("返回模式选择");
         back.setOnAction(e -> {
             shutdownAll();
-            shell.navigate("game-modes");
+            shell.navigate("mode-choice");
         });
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());

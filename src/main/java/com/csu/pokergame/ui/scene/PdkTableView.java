@@ -77,7 +77,7 @@ public final class PdkTableView extends BorderPane {
 
         // 顶部：返回 + 牌桌信息条 + 设置
         Button back = new Button("返回");
-        back.setOnAction(e -> shell.navigate("game-modes"));
+        back.setOnAction(e -> shell.navigate("mode-choice"));
         Button settings = new Button("设置");
         settings.setOnAction(e -> shell.openSettings());
         HBox topLeft = new HBox(12, back);
@@ -239,7 +239,7 @@ public final class PdkTableView extends BorderPane {
         again.getStyleClass().add("primary");
         again.setOnAction(e -> shell.navigate("pdk"));
         Button back = new Button("返回游戏选择");
-        back.setOnAction(e -> shell.navigate("game-modes"));
+        back.setOnAction(e -> shell.navigate("mode-choice"));
 
         box.getChildren().addAll(title, detailLabel, new HBox(12, again, back));
         overlay.getChildren().add(box);
