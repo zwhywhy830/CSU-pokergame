@@ -1,0 +1,8 @@
+[ {
+  "accountId" : "acc-default",
+  "username" : "default",
+  "password" : "123456",
+  "playerFile" : "players/default.json",
+  "createTime" : 1789105792719,
+  "lastLoginTime" : 1789112286798
+} ]

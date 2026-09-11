@@ -1,0 +1,22 @@
+{
+  "id" : "player001",
+  "name" : "玩家",
+  "level" : 12,
+  "exp" : 750,
+  "gold" : 2400,
+  "diamond" : 50,
+  "totalGames" : 39,
+  "totalWins" : 26,
+  "totalLosses" : 13,
+  "currentWinStreak" : 1,
+  "maxWinStreak" : 1,
+  "avatar" : "♛",
+  "totalGoldEarned" : 2500,
+  "totalGoldSpent" : 1100,
+  "achievementCount" : 3,
+  "vipLevel" : 0,
+  "achievements" : [ "FIRST_GAME", "FIRST_WIN", "LEVEL_10" ],
+  "inventory" : [ ],
+  "luckyCount" : 0,
+  "doubleExpCount" : 0
+}
