@@ -143,9 +143,9 @@ public final class PdkTableView extends BorderPane {
         seat2.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_2));
         seat3.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_3));
         seat2.setState(snap.currentPlayer() == PlayerId.SEAT_2
-                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.IDLE);
+                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
         seat3.setState(snap.currentPlayer() == PlayerId.SEAT_3
-                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.IDLE);
+                ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
     }
 
     private void renderTable(PdkSnapshot snap) {
