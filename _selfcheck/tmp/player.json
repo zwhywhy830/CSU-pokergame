@@ -1,0 +1,18 @@
+{
+  "id" : "player001",
+  "name" : "玩家",
+  "level" : 20,
+  "exp" : 1100,
+  "gold" : 25850,
+  "diamond" : 50,
+  "winCount" : 30,
+  "loseCount" : 13,
+  "currentWinStreak" : 5,
+  "maxWinStreak" : 5,
+  "avatar" : "♛",
+  "totalGoldEarned" : 24850,
+  "totalGoldSpent" : 0,
+  "achievementCount" : 6,
+  "vipLevel" : 0,
+  "achievements" : [ "FIRST_GAME", "FIRST_WIN", "WIN_STREAK_5", "GOLD_10000", "LEVEL_10", "LEVEL_20" ]
+}

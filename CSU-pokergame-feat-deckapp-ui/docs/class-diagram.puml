@@ -1,0 +1,229 @@
+@startuml 包结构与类图
+' ============================================================
+' 扑克牌小游戏 —— 包结构与类图（成员/可见性均从实际代码抽取）
+'
+' 包结构总览：
+' com.cards
+'   ├── DeckApp                主程序（JavaFX Application，界面组装与流程控制）
+'   ├── model/                 核心实体层
+'   │     ├── Card             扑克牌接口（含工厂方法）
+'   │     ├── RegularCard      普通牌实现（花色 + 点数 A..K）
+'   │     ├── JokerCard        王牌实现（大王/小王）
+'   │     └── Suit             花色枚举（黑桃/红桃/梅花/方块）
+'   ├── deck/                  牌组层
+'   │     ├── Deck             牌组接口
+'   │     └── StandardDeck     标准 54 张牌组实现
+'   ├── render/                绘制服务层
+'   │     ├── CardRenderer         渲染器接口
+'   │     └── CanvasCardRenderer   JavaFX Canvas 矢量绘制实现
+'   ├── io/                    导出层
+'   │     ├── CardImageWriter      图像导出接口
+'   │     └── PngCardImageWriter   极简 PNG 编码器实现
+'   └── ui/                    界面组件层
+'         ├── CardCell         单张扑克牌卡片组件
+'         └── ParticleField    背景粒子动画组件
+' ============================================================
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+' ================= 主程序层 =================
+package com.cards <<主程序层>> {
+  class DeckApp as "DeckApp 主程序" {
+    - faceCache : Map<Card, Image>
+    - backCache : Map<Boolean, Image>
+    - renderer : CardRenderer
+    - imageWriter : CardImageWriter
+    - order : List<Card>
+    - backRed : boolean
+    - cells : List<CardCell>
+    + {static} main(args : String[]) : void
+    + start(stage : Stage) : void
+    - rebuildGrid() : void
+    - flipAll(up : boolean) : void
+    - imageFor(card : Card, faceUp : boolean) : Image
+    - exportTo(dir : Path) : int
+  }
+}
+
+' ================= 核心实体层 =================
+package com.cards.model <<核心实体层>> {
+  enum Suit as "Suit 花色" {
+    SPADE
+    HEART
+    CLUB
+    DIAMOND
+    - glyph : String
+    - chinese : String
+    - red : boolean
+    + glyph() : String
+    + chinese() : String
+    + isRed() : boolean
+  }
+
+  interface Card as "Card 扑克牌" {
+    + {static} RANK_A : int
+    + {static} RANK_10 : int
+    + {static} RANK_J : int
+    + {static} RANK_Q : int
+    + {static} RANK_K : int
+    + isJoker() : boolean
+    + isBigJoker() : boolean
+    + suit() : Suit
+    + rank() : int
+    + rankText() : String
+    + shortText() : String
+    + name() : String
+    + {static} of(suit : Suit, rank : int) : Card
+    + {static} blackJoker() : Card
+    + {static} redJoker() : Card
+  }
+
+  class RegularCard as "RegularCard 普通牌" {
+    - suit : Suit
+    - rank : int
+    ~RegularCard(suit : Suit, rank : int)
+    + isJoker() : boolean
+    + isBigJoker() : boolean
+    + suit() : Suit
+    + rank() : int
+    + rankText() : String
+    + shortText() : String
+    + name() : String
+    + equals(o : Object) : boolean
+    + hashCode() : int
+  }
+
+  class JokerCard as "JokerCard 王牌" {
+    - bigJoker : boolean
+    ~JokerCard(bigJoker : boolean)
+    + isJoker() : boolean
+    + isBigJoker() : boolean
+    + suit() : Suit
+    + rank() : int
+    + rankText() : String
+    + shortText() : String
+    + name() : String
+    + equals(o : Object) : boolean
+    + hashCode() : int
+  }
+}
+
+' ================= 牌组层 =================
+package com.cards.deck <<牌组层>> {
+  interface Deck as "Deck 牌组" {
+    + cards() : List<Card>
+    + size() : int
+    + shuffled() : List<Card>
+    + {static} standard() : Deck
+  }
+
+  class StandardDeck as "StandardDeck 标准牌组" {
+    - cards : List<Card>
+    + StandardDeck()
+    + cards() : List<Card>
+    + size() : int
+    + shuffled() : List<Card>
+  }
+}
+
+' ================= 绘制服务层 =================
+package com.cards.render <<绘制服务层>> {
+  interface CardRenderer as "CardRenderer 渲染器" {
+    + {static} WIDTH : double
+    + {static} HEIGHT : double
+    + face(card : Card) : Image
+    + back(red : boolean) : Image
+  }
+
+  class CanvasCardRenderer as "CanvasCardRenderer 画布渲染器" {
+    + face(card : Card) : Image
+    + back(red : boolean) : Image
+    - {static} render(w : double, h : double, painter : Consumer) : Image
+    - {static} drawFace(gc : GraphicsContext, card : Card) : void
+    - {static} drawBack(gc : GraphicsContext, red : boolean) : void
+    - {static} drawJokerFace(gc : GraphicsContext, card : Card) : void
+    - {static} drawCourt(gc : GraphicsContext, card : Card, cc : Color) : void
+  }
+}
+
+' ================= 导出层 =================
+package com.cards.io <<导出层>> {
+  interface CardImageWriter as "CardImageWriter 图像导出" {
+    + write(image : Image, file : Path) : void
+  }
+
+  class PngCardImageWriter as "PngCardImageWriter PNG导出" {
+    + write(image : Image, file : Path) : void
+    - {static} ihdr(w : int, h : int) : byte[]
+    - {static} writeChunk(out : DataOutputStream, type : String, data : byte[]) : void
+  }
+}
+
+' ================= 界面组件层 =================
+package com.cards.ui <<界面组件层>> {
+  class CardCell as "CardCell 牌卡片" {
+    + {static} DISPLAY_WIDTH : double
+    - card : Card
+    - imageProvider : BiFunction<Card, Boolean, Image>
+    - up : boolean
+    - imageView : ImageView
+    - caption : Label
+    + CardCell(card : Card, imageProvider : BiFunction)
+    + card() : Card
+    + setFaceUp(value : boolean) : void
+    + applyState() : void
+  }
+
+  class ParticleField as "ParticleField 粒子层" {
+    - canvas : Canvas
+    - particles : List<P>
+    - rnd : Random
+    - timer : AnimationTimer
+    - lastNanos : long
+    + play() : void
+    + stop() : void
+    - seed() : void
+    - tick(dt : double) : void
+  }
+}
+
+' ================= 关系 =================
+' 接口实现（realization）
+Card <|.. RegularCard
+Card <|.. JokerCard
+Deck <|.. StandardDeck
+CardRenderer <|.. CanvasCardRenderer
+CardImageWriter <|.. PngCardImageWriter
+
+' 继承（JavaFX 框架类）
+CardCell --|> javafx.scene.layout.VBox
+ParticleField --|> javafx.scene.layout.Pane
+DeckApp --|> javafx.application.Application
+
+' 实体间关联
+RegularCard --> Suit : 持有花色
+Card ..> Suit : suit() 返回
+
+' 牌组聚合 54 张牌
+StandardDeck o-- "54" Card : 聚合
+StandardDeck ..> Card : 工厂创建
+
+' 渲染 / 导出依赖
+CanvasCardRenderer ..> Card : 绘制
+PngCardImageWriter ..> Image : 编码
+
+' 主程序组装关系
+DeckApp ..> Deck : Deck.standard()
+DeckApp --> CardRenderer : renderer
+DeckApp --> CardImageWriter : imageWriter
+DeckApp *-- "54" CardCell : 组成
+DeckApp *-- ParticleField : 组成
+DeckApp ..> Card : order / 缓存
+
+' 界面组件依赖
+CardCell --> Card : 持有
+CardCell ..> BiFunction : 图像提供者
+
+@enduml

@@ -1,0 +1,22 @@
+{
+  "id" : "123456789",
+  "name" : "123456789",
+  "level" : 1,
+  "exp" : 20,
+  "gold" : 1050,
+  "diamond" : 50,
+  "totalGames" : 0,
+  "totalWins" : 0,
+  "totalLosses" : 0,
+  "currentWinStreak" : 0,
+  "maxWinStreak" : 0,
+  "avatar" : "♛",
+  "totalGoldEarned" : 100,
+  "totalGoldSpent" : 50,
+  "achievementCount" : 1,
+  "vipLevel" : 0,
+  "achievements" : [ "FIRST_GAME" ],
+  "inventory" : [ ],
+  "luckyCount" : 0,
+  "doubleExpCount" : 0
+}

@@ -1,0 +1,8 @@
+{
+  "masterVolume" : 80,
+  "musicEnabled" : true,
+  "soundEnabled" : true,
+  "animationEnabled" : true,
+  "aiHintEnabled" : true,
+  "theme" : "dark"
+}

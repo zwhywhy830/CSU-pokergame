@@ -1,0 +1,10 @@
+# 编译输出
+out/
+target/
+
+# IDE 配置
+.trae/
+.idea/
+
+# Maven
+*.log

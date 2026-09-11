@@ -1,0 +1,43 @@
+{
+  "id" : "player001",
+  "name" : "玩家",
+  "level" : 12,
+  "exp" : 890,
+  "gold" : 20920,
+  "diamond" : 50,
+  "totalGames" : 39,
+  "totalWins" : 25,
+  "totalLosses" : 14,
+  "currentWinStreak" : 0,
+  "maxWinStreak" : 0,
+  "avatar" : "♛",
+  "totalGoldEarned" : 20920,
+  "totalGoldSpent" : 1000,
+  "achievementCount" : 3,
+  "vipLevel" : 0,
+  "achievements" : [ "FIRST_GAME", "GOLD_10000", "LEVEL_10" ],
+  "inventory" : [ {
+    "id" : "LUCKY_CARD",
+    "name" : "幸运牌",
+    "description" : "增加游戏幸运效果",
+    "count" : 2,
+    "icon" : "\uD83C\uDF40",
+    "type" : "CONSUMABLE"
+  }, {
+    "id" : "DOUBLE_EXP_CARD",
+    "name" : "双倍经验卡",
+    "description" : "用于成长系统",
+    "count" : 3,
+    "icon" : "⭐",
+    "type" : "CONSUMABLE"
+  }, {
+    "id" : "GOLD_BOX",
+    "name" : "金币宝箱",
+    "description" : "打开获得金币",
+    "count" : 2,
+    "icon" : "\uD83C\uDF81",
+    "type" : "CONSUMABLE"
+  } ],
+  "luckyCount" : 1,
+  "doubleExpCount" : 0
+}
