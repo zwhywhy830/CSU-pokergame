@@ -4,9 +4,17 @@ import com.cards.ui.LobbyHelper;
 import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
+import com.cards.ui.component.GrowthResultPanel;
 import com.cards.ui.component.PlayedCardsView;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
+import com.csu.pokergame.player.Achievement;
+import com.csu.pokergame.player.AchievementService;
+import com.csu.pokergame.player.GameRecordService;
+import com.csu.pokergame.player.PlayerGrowthService;
+import com.csu.pokergame.player.PlayerManager;
+import com.csu.pokergame.player.PlayerProfile;
+import com.csu.pokergame.player.PlayerStatsService;
 import com.cards.ui.pdk.PdkHandView;
 import com.cards.ui.pdk.PdkPlayerSeat;
 import com.cards.ui.pdk.PdkTableHeader;
@@ -69,6 +77,10 @@ public final class PdkTableView extends BorderPane {
     private static final int GAME_WIN_REWARD = 200;
     /** 失败参与奖励（金币）。 */
     private static final int GAME_LOSS_REWARD = 50;
+    /** 胜利获得经验。 */
+    private static final int PDK_WIN_EXP = 50;
+    /** 失败获得经验。 */
+    private static final int PDK_LOSS_EXP = 20;
 
     private final AppShell shell;
     private final PdkEngine engine;
@@ -87,6 +99,13 @@ public final class PdkTableView extends BorderPane {
 
     /** 本局结算闸门：防止 refresh 重入导致重复加金币 / 播放结算动画。 */
     private boolean settled = false;
+
+    // ----- 结算成长反馈字段（对应 DeckApp 的 pdkWinForResult 等） -----
+    private boolean winForResult;
+    private int goldDeltaForResult;
+    private int expGainForResult;
+    private PlayerGrowthService.LevelUpResult growthForResult;
+    private final List<Achievement> achievementsForResult = new ArrayList<>();
 
     public PdkTableView(AppShell shell) {
         this.shell = shell;
@@ -362,9 +381,10 @@ public final class PdkTableView extends BorderPane {
             subtitle.append("    ");
         }
 
-        // 胜负庆祝层（胜利金色星光 / 失败灰化遮罩）
+        // 胜负庆祝层（胜利金色星光 / 失败灰化遮罩）+ 成长反馈面板
         StackPane root = (StackPane) getCenter();
-        WinCelebration celebration = new WinCelebration(localWon, subtitle.toString().trim(), null);
+        javafx.scene.Node growthPanel = buildGrowthPanel();
+        WinCelebration celebration = new WinCelebration(localWon, subtitle.toString().trim(), growthPanel);
 
         // 操作按钮行：重新开始 / 返回选择游戏（叠在 celebration 之上）
         Button again = new Button("重新开始");
@@ -387,6 +407,40 @@ public final class PdkTableView extends BorderPane {
         celebration.getChildren().add(btnRow);
 
         root.getChildren().add(celebration);
+
+        // 结算表现动画：胜负动画 + 金币飞入 + 升级光环 + 提示条
+        GameAnimationService anim = GameAnimationService.getInstance();
+        if (localWon) {
+            anim.playWinAnimation(root, celebration);
+        } else {
+            anim.playLoseAnimation(celebration);
+        }
+        boolean upgraded = growthForResult != null && growthForResult.upgraded();
+        PauseTransition settleDelay = new PauseTransition(Duration.millis(140));
+        settleDelay.setOnFinished(e -> {
+            javafx.scene.Node coinTarget = coinBar != null ? coinBar : celebration;
+            anim.playCoinAnimation(growthPanel, coinTarget, null);
+            if (upgraded) {
+                anim.playLevelUpAnimation(growthPanel);
+            }
+            anim.showToast(celebration, settleToastText(upgraded));
+        });
+        settleDelay.play();
+    }
+
+    /** 结算提示条文案：金币 / 经验 / 升级 / 成就。 */
+    private String settleToastText(boolean upgraded) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("＋").append(goldDeltaForResult).append(" 金币")
+                .append(" · ＋").append(expGainForResult).append(" 经验");
+        if (upgraded && growthForResult != null) {
+            msg.append(" · ✨ Level UP Lv.").append(growthForResult.getOldLevel())
+                    .append(" → Lv.").append(growthForResult.getNewLevel());
+        }
+        if (!achievementsForResult.isEmpty()) {
+            msg.append(" · 🏆 ").append(achievementsForResult.get(0).getTitle());
+        }
+        return msg.toString();
     }
 
     /**
@@ -397,12 +451,75 @@ public final class PdkTableView extends BorderPane {
      * 完成后同步顶部金币栏显示最新余额。
      */
     private void settlePdk(boolean win) {
-        int reward = win ? GAME_WIN_REWARD : GAME_LOSS_REWARD;
+        int goldDelta = win ? GAME_WIN_REWARD : GAME_LOSS_REWARD;
+        int expGain = win ? PDK_WIN_EXP : PDK_LOSS_EXP;
         String reason = win ? "跑得快胜利奖励" : "跑得快参与奖励";
-        coinService.addGold(reward, reason);
+        coinService.addGold(goldDelta, reason);
+
+        // 加经验并自动升级
+        PlayerGrowthService growthService = PlayerGrowthService.getInstance();
+        growthForResult = growthService.addExp(expGain);
+
+        // 战绩统计
+        PlayerStatsService.getInstance().recordGameResult(win);
+
+        // 战绩明细
+        GameRecordService.getInstance().addRecord(
+                GameRecordService.GAME_PDK, win, goldDelta, expGain, GameRecordService.OPPONENT_AI);
+
+        // 成就检测
+        if (win) {
+            achievementsForResult.addAll(AchievementService.getInstance().checkOnWin());
+        }
+        achievementsForResult.addAll(AchievementService.getInstance().checkOnGoldChange());
+        achievementsForResult.addAll(AchievementService.getInstance().checkOnLevelUp());
+
+        // 记录本局成长反馈
+        winForResult = win;
+        goldDeltaForResult = goldDelta;
+        expGainForResult = expGain;
+
         if (coinBar != null) {
             coinBar.setCoins(coinService.getGold());
         }
+    }
+
+    /**
+     * 构建跑得快结算成长反馈面板（对应 DeckApp.buildPdkGrowthPanel）。
+     */
+    private javafx.scene.Node buildGrowthPanel() {
+        PlayerProfile profile = PlayerManager.getInstance().getProfile();
+        PlayerGrowthService growthService = PlayerGrowthService.getInstance();
+        int level = profile.getLevel();
+        GrowthResultPanel panel = new GrowthResultPanel(
+                winForResult,
+                goldDeltaForResult,
+                expGainForResult,
+                level,
+                growthService.getLevelTitle(level),
+                growthService.getLevelBadge(level),
+                profile.getExp(),
+                growthService.expToNextLevel(level),
+                growthForResult);
+        if (achievementsForResult.isEmpty()) {
+            return panel;
+        }
+        VBox box = new VBox(10, panel, buildAchievementNotice());
+        box.setAlignment(Pos.CENTER);
+        return box;
+    }
+
+    /** 本局解锁的成就提示条。 */
+    private VBox buildAchievementNotice() {
+        VBox box = new VBox(6);
+        box.setAlignment(Pos.CENTER);
+        for (Achievement a : achievementsForResult) {
+            Label label = new Label("🏆 成就解锁：" + a.getTitle()
+                    + "　奖励 +" + a.getRewardGold() + " 金币 / +" + a.getRewardExp() + " 经验");
+            label.getStyleClass().add("growth-result-achievement");
+            box.getChildren().add(label);
+        }
+        return box;
     }
 
     private static String name(PlayerId p) {

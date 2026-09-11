@@ -10,8 +10,14 @@ import java.util.Set;
 import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
+import com.cards.ui.component.GrowthResultPanel;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
+import com.csu.pokergame.player.Achievement;
+import com.csu.pokergame.player.AchievementService;
+import com.csu.pokergame.player.GameRecordService;
+import com.csu.pokergame.player.PlayerGrowthService;
+import com.csu.pokergame.player.PlayerProfile;
 import com.cards.ui.liar.LiarActionBar;
 import com.cards.ui.liar.LiarClaimPanel;
 import com.cards.ui.liar.LiarHandView;
@@ -48,6 +54,7 @@ import javafx.scene.effect.BoxBlur;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
@@ -72,6 +79,8 @@ public final class LiarTableView extends BorderPane {
     private static final int GAME_ENTRY_COST = 100;
     private static final int GAME_WIN_REWARD = 200;
     private static final int GAME_LOSS_REWARD = 50;
+    private static final int LIAR_WIN_EXP = 50;
+    private static final int LIAR_LOSS_EXP = 20;
 
     /** 座位顺序与容器 index 一一对应。 */
     private static final PlayerId[] SEAT_ORDER = {
@@ -94,6 +103,13 @@ public final class LiarTableView extends BorderPane {
 
     /** 本局是否已结算（防止重复结算 / 重复叠加结算层）。 */
     private boolean settled;
+
+    // ----- 结算成长反馈字段 -----
+    private boolean winForResult;
+    private int goldDeltaForResult;
+    private int expGainForResult;
+    private PlayerGrowthService.LevelUpResult growthForResult;
+    private final List<Achievement> achievementsForResult = new ArrayList<>();
 
     public LiarTableView(AppShell shell) {
         this.shell = shell;
@@ -400,8 +416,9 @@ public final class LiarTableView extends BorderPane {
             subtitle = localWon ? "你是最后存活者" : name(snap.winner().orElseThrow()) + " 是最后存活者";
         }
 
-        // 终局庆祝层：胜利金色星光 / 失败灰化（替换原 result-overlay）
-        WinCelebration celebration = new WinCelebration(localWon, subtitle, null);
+        // 终局庆祝层：胜利金色星光 / 失败灰化 + 成长反馈面板
+        javafx.scene.Node growthPanel = buildGrowthPanel();
+        WinCelebration celebration = new WinCelebration(localWon, subtitle, growthPanel);
 
         Button again = new Button("重新开始");
         again.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
@@ -423,6 +440,25 @@ public final class LiarTableView extends BorderPane {
 
         StackPane root = (StackPane) getCenter();
         root.getChildren().add(celebration);
+
+        // 结算表现动画
+        GameAnimationService anim = GameAnimationService.getInstance();
+        if (localWon) {
+            anim.playWinAnimation(root, celebration);
+        } else {
+            anim.playLoseAnimation(celebration);
+        }
+        boolean upgraded = growthForResult != null && growthForResult.upgraded();
+        PauseTransition settleDelay = new PauseTransition(Duration.millis(140));
+        settleDelay.setOnFinished(e -> {
+            javafx.scene.Node coinTarget = liarCoinBar != null ? liarCoinBar : celebration;
+            anim.playCoinAnimation(growthPanel, coinTarget, null);
+            if (upgraded) {
+                anim.playLevelUpAnimation(growthPanel);
+            }
+            anim.showToast(celebration, settleToastText(upgraded));
+        });
+        settleDelay.play();
     }
 
     /**
@@ -431,10 +467,86 @@ public final class LiarTableView extends BorderPane {
     private void settleLiar(boolean win) {
         CoinService coinService = CoinService.getInstance();
         int goldDelta = win ? GAME_WIN_REWARD : GAME_LOSS_REWARD;
+        int expGain = win ? LIAR_WIN_EXP : LIAR_LOSS_EXP;
         coinService.addGold(goldDelta, win ? "骗子酒馆胜利奖励" : "骗子酒馆参与奖励");
+
+        // 加经验并自动升级
+        PlayerGrowthService growthService = PlayerGrowthService.getInstance();
+        growthForResult = growthService.addExp(expGain);
+
+        // 战绩统计
+        com.csu.pokergame.player.PlayerStatsService.getInstance().recordGameResult(win);
+
+        // 战绩明细
+        GameRecordService.getInstance().addRecord(
+                "骗子酒馆", win, goldDelta, expGain, GameRecordService.OPPONENT_AI);
+
+        // 成就检测
+        if (win) {
+            achievementsForResult.addAll(AchievementService.getInstance().checkOnWin());
+        }
+        achievementsForResult.addAll(AchievementService.getInstance().checkOnGoldChange());
+        achievementsForResult.addAll(AchievementService.getInstance().checkOnLevelUp());
+
+        // 记录本局成长反馈
+        winForResult = win;
+        goldDeltaForResult = goldDelta;
+        expGainForResult = expGain;
+
         liarCoinBar.setCoins(coinService.getGold());
         AudioService.getInstance()
                 .playEffect(win ? SoundEffect.WIN : SoundEffect.LOSE);
+    }
+
+    /** 构建骗子酒馆结算成长反馈面板。 */
+    private javafx.scene.Node buildGrowthPanel() {
+        PlayerProfile profile = PlayerManager.getInstance().getProfile();
+        PlayerGrowthService growthService = PlayerGrowthService.getInstance();
+        int level = profile.getLevel();
+        GrowthResultPanel panel = new GrowthResultPanel(
+                winForResult,
+                goldDeltaForResult,
+                expGainForResult,
+                level,
+                growthService.getLevelTitle(level),
+                growthService.getLevelBadge(level),
+                profile.getExp(),
+                growthService.expToNextLevel(level),
+                growthForResult);
+        if (achievementsForResult.isEmpty()) {
+            return panel;
+        }
+        VBox box = new VBox(10, panel, buildAchievementNotice());
+        box.setAlignment(Pos.CENTER);
+        return box;
+    }
+
+    /** 本局解锁的成就提示条。 */
+    private VBox buildAchievementNotice() {
+        VBox box = new VBox(6);
+        box.setAlignment(Pos.CENTER);
+        for (Achievement a : achievementsForResult) {
+            Label label = new Label("🏆 成就解锁：" + a.getTitle()
+                    + "　奖励 +" + a.getRewardGold() + " 金币 / +" + a.getRewardExp() + " 经验");
+            label.getStyleClass().add("growth-result-achievement");
+            box.getChildren().add(label);
+        }
+        return box;
+    }
+
+    /** 结算提示条文案。 */
+    private String settleToastText(boolean upgraded) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("＋").append(goldDeltaForResult).append(" 金币")
+                .append(" · ＋").append(expGainForResult).append(" 经验");
+        if (upgraded && growthForResult != null) {
+            msg.append(" · ✨ Level UP Lv.").append(growthForResult.getOldLevel())
+                    .append(" → Lv.").append(growthForResult.getNewLevel());
+        }
+        if (!achievementsForResult.isEmpty()) {
+            msg.append(" · 🏆 ").append(achievementsForResult.get(0).getTitle());
+        }
+        return msg.toString();
     }
 
     private static String phaseName(LiarPhase phase) {
