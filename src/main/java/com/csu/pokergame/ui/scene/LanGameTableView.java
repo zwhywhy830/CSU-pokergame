@@ -5,6 +5,7 @@ import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
 import com.cards.ui.component.GrowthResultPanel;
 import com.cards.ui.component.PlayedCardsView;
+import com.cards.ui.component.PlayHistoryPanel;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
 import com.cards.ui.liar.LiarActionBar;
@@ -50,7 +51,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.layout.BorderPane;
@@ -99,7 +99,7 @@ public final class LanGameTableView extends BorderPane {
     private final Set<Card> selected = new LinkedHashSet<>();
     private final Set<Integer> selectedLiarIndices = new LinkedHashSet<>();
     private final Label statusText = new Label();
-    private final ListView<String> log = new ListView<>();
+    private final PlayHistoryPanel log = new PlayHistoryPanel();
     private CoinBar coinBar;
 
     // ----- PDK 组件 -----
@@ -113,6 +113,8 @@ public final class LanGameTableView extends BorderPane {
     // ----- Liar 组件 -----
     private com.cards.ui.liar.LiarTableView liarView;
     private CoinBar liarCoinBar;
+    /** 已播放过音效的质疑结算（网络快照到达时检测新增 resolution）。 */
+    private LiarResolution lastLiarResolutionSounded;
 
     // =====================================================================
     //  构造
@@ -133,8 +135,10 @@ public final class LanGameTableView extends BorderPane {
 
         if (gameType == GameType.PAO_DE_KUAI) {
             buildPdkLayout();
+            AudioService.getInstance().playMusic(AudioService.BGM_PDK);
         } else {
             buildLiarLayout();
+            AudioService.getInstance().playMusic(AudioService.BGM_LIAR);
         }
 
         GameAnimationService.getInstance().installButtonFeedback(this);
@@ -163,8 +167,10 @@ public final class LanGameTableView extends BorderPane {
 
         if (gameType == GameType.PAO_DE_KUAI) {
             buildPdkLayout();
+            AudioService.getInstance().playMusic(AudioService.BGM_PDK);
         } else {
             buildLiarLayout();
+            AudioService.getInstance().playMusic(AudioService.BGM_LIAR);
         }
 
         GameAnimationService.getInstance().installButtonFeedback(this);
@@ -231,7 +237,6 @@ public final class LanGameTableView extends BorderPane {
         pdkHandView = new PdkHandView(selected);
         table.setBottom(pdkHandView);
 
-        log.getStyleClass().add("table-log");
         log.setPrefWidth(220);
         log.setMaxHeight(Double.MAX_VALUE);
         table.setRight(log);
@@ -367,15 +372,13 @@ public final class LanGameTableView extends BorderPane {
         }
 
         // 桌面
+        String pdkPlayerName = snap.lastPlayer().map(this::name).orElse(null);
         snap.lastMove().ifPresentOrElse(
-                move -> pdkTableCards.setCards(move.cards(), null),
+                move -> pdkTableCards.setCards(move.cards(), pdkPlayerName),
                 () -> pdkTableCards.setCards(List.of(), null));
 
         // 日志
-        log.getItems().setAll(snap.publicEvents());
-        if (!snap.publicEvents().isEmpty()) {
-            log.scrollTo(snap.publicEvents().size() - 1);
-        }
+        log.setEvents(snap.publicEvents());
 
         // 手牌
         pdkHandView.setCards(snap.myHand());
@@ -450,9 +453,20 @@ public final class LanGameTableView extends BorderPane {
         selectedLiarIndices.removeIf(i -> i >= snap.myHand().size());
         hand.refreshSelection();
 
-        List<String> events = new ArrayList<>(snap.publicEvents());
-        java.util.Collections.reverse(events);
-        liarView.setLogEntries(events);
+        // 日志（时间顺序，PlayHistoryPanel 自动滚动到底部）
+        liarView.setLogEntries(snap.publicEvents());
+
+        // 新的质疑结算到达：先质疑揭示音，1s 后枪响 / 空仓咔哒
+        snap.lastResolution().ifPresent(res -> {
+            if (res != lastLiarResolutionSounded) {
+                lastLiarResolutionSounded = res;
+                AudioService.getInstance().playEffect(SoundEffect.CHALLENGE_REVEAL);
+                PauseTransition gun = new PauseTransition(Duration.millis(1000));
+                gun.setOnFinished(e -> AudioService.getInstance().playEffect(
+                        res.hit() ? SoundEffect.GUN_FIRE : SoundEffect.GUN_CLICK));
+                gun.play();
+            }
+        });
 
         if (snap.winner().isPresent()) {
             renderLiarResult(snap);
@@ -471,7 +485,9 @@ public final class LanGameTableView extends BorderPane {
 
             GunState gun = snap.guns().get(p);
             int pulled = gun == null ? 0 : gun.shotsFired();
-            seat.setLife(Math.max(0, 3 - pulled / 2));
+            // 左轮枪仓：与单机桌一致，用心数换成仓孔（子弹位置保密）
+            seat.setLife(-1);
+            seat.setChambers(pulled);
 
             if (snap.eliminatedPlayers().contains(p)) {
                 seat.setDead();

@@ -199,7 +199,7 @@ public final class LiarEngine implements GameEngine {
         state = new LiarState(s.hands(), s.alive(), s.guns(), s.targetRank(),
                 LiarPhase.DECLARE, next, null,
                 List.of(), s.lastResolution(), s.winner(),
-                withEvent(s.publicEvents(), name(s.responder()) + " 相信，轮到其出牌"));
+                withEvent(s.publicEvents(), name(s.responder()) + " 选择相信，轮到其出牌"));
     }
 
     private void applyChallenge(LiarState s) {
@@ -237,10 +237,13 @@ public final class LiarEngine implements GameEngine {
         LiarPhase phase = winner != null ? LiarPhase.FINISHED : LiarPhase.DECLARE;
         PlayerId nextDeclarer = winner != null ? null : nextAlive(shooter, newAlive);
 
-        // 不论中弹与否，都先记录事件
+        // 质疑流程拆成三步入史：发起质疑 → 质疑结果 → 扣扳机结果
         List<String> events = withEvent(s.publicEvents(),
-                (truthful ? "宣告属实，" : "宣告被拆穿，") + name(shooter) + " 扣扳机"
-                        + (hit ? "，中弹被淘汰" : "，空仓存活"));
+                name(s.responder()) + " 选择质疑！");
+        events = appendEvent(events,
+                truthful ? "质疑失败：宣告属实" : "质疑成功：拆穿谎言！");
+        events = appendEvent(events,
+                name(shooter) + (hit ? " 扣扳机——中弹！被淘汰" : " 扣扳机——咔哒，空仓存活"));
 
         if (winner != null) {
             events = appendEvent(events, name(winner) + " 获胜，对局结束");

@@ -9,7 +9,13 @@ public enum SoundEffect {
     LOSE("/audio/effect/lose.wav"),
     COIN_GAIN("/audio/effect/coin.wav"),
     LEVEL_UP("/audio/effect/level_up.wav"),
-    ACHIEVEMENT_UNLOCK("/audio/effect/achievement.wav");
+    ACHIEVEMENT_UNLOCK("/audio/effect/achievement.wav"),
+    /** 骗子酒馆：左轮空仓扣扳机（金属咔哒）。 */
+    GUN_CLICK("/audio/effect/gun_click.wav"),
+    /** 骗子酒馆：中弹枪响。 */
+    GUN_FIRE("/audio/effect/gun_fire.wav"),
+    /** 骗子酒馆：发起质疑时的紧张揭示音。 */
+    CHALLENGE_REVEAL("/audio/effect/challenge_reveal.wav");
 
     private final String path;
 

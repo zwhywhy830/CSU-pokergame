@@ -26,8 +26,12 @@ import java.util.Map;
  */
 public final class AudioService {
 
-    /** 背景音乐资源路径。 */
+    /** 大厅背景音乐资源路径。 */
     public static final String BGM_LOBBY = "/audio/bgm/lobby.mp3";
+    /** 跑得快局内背景音乐（斗地主经典轻快风）。 */
+    public static final String BGM_PDK = "/audio/bgm/pdk.wav";
+    /** 骗子酒馆局内背景音乐（悬疑紧张风）。 */
+    public static final String BGM_LIAR = "/audio/bgm/liar.wav";
 
     private static volatile AudioService instance;
 

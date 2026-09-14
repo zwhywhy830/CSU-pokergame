@@ -6,6 +6,7 @@ import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
 import com.cards.ui.component.GrowthResultPanel;
 import com.cards.ui.component.PlayedCardsView;
+import com.cards.ui.component.PlayHistoryPanel;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
 import com.csu.pokergame.player.Achievement;
@@ -40,7 +41,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -94,11 +94,13 @@ public final class PdkTableView extends BorderPane {
     private final PdkPlayerSeat seat3 = new PdkPlayerSeat("♝", "AI2", 1, false);
     private final PlayedCardsView tableCards = new PlayedCardsView();
     private final Label statusText = new Label();
-    private final ListView<String> log = new ListView<>();
+    private final PlayHistoryPanel log = new PlayHistoryPanel();
     private final PdkHandView handView = new PdkHandView(selected);
 
     /** 本局结算闸门：防止 refresh 重入导致重复加金币 / 播放结算动画。 */
     private boolean settled = false;
+    /** Bot 回合调度锁：防止 refresh 多次触发重复 PauseTransition 叠加。 */
+    private boolean botScheduled = false;
 
     // ----- 结算成长反馈字段（对应 DeckApp 的 pdkWinForResult 等） -----
     private boolean winForResult;
@@ -124,6 +126,8 @@ public final class PdkTableView extends BorderPane {
         wireActions();
         refresh();
         GameAnimationService.getInstance().installButtonFeedback(this);
+        // 进入跑得快牌桌：切换为斗地主经典风格 BGM（音乐关闭时静默跳过）
+        AudioService.getInstance().playMusic(AudioService.BGM_PDK);
     }
 
     private void buildLayout() {
@@ -172,8 +176,7 @@ public final class PdkTableView extends BorderPane {
         // 底部：玩家手牌
         table.setBottom(handView);
 
-        // 右侧：日志
-        log.getStyleClass().add("table-log");
+        // 右侧：出牌历史面板
         log.setPrefWidth(220);
         log.setMaxHeight(Double.MAX_VALUE);
         table.setRight(log);
@@ -258,17 +261,14 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void renderTable(PdkSnapshot snap) {
-        // PdkMove 不含出牌者信息，快照也未暴露 lastMover，仅展示牌面
+        String playerName = snap.lastPlayer().map(PdkTableView::name).orElse(null);
         snap.lastMove().ifPresentOrElse(
-                move -> tableCards.setCards(move.cards(), null),
+                move -> tableCards.setCards(move.cards(), playerName),
                 () -> tableCards.setCards(List.of(), null));
     }
 
     private void renderLog(PdkSnapshot snap) {
-        log.getItems().setAll(snap.publicEvents());
-        if (!snap.publicEvents().isEmpty()) {
-            log.scrollTo(snap.publicEvents().size() - 1);
-        }
+        log.setEvents(snap.publicEvents());
     }
 
     private void renderHand(PdkSnapshot snap) {
@@ -331,24 +331,42 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void scheduleBotTurn(PlayerId bot) {
-        PauseTransition pause = new PauseTransition(Duration.millis(450));
+        // 重入保护：上一个 bot 定时器还没跑完就不要叠新的，否则 legal 空 → refresh → 再 schedule → 无限循环
+        if (botScheduled) {
+            return;
+        }
+        botScheduled = true;
+        PauseTransition pause = new PauseTransition(Duration.millis(5000));
         pause.setOnFinished(e -> {
-            GameSnapshot snap = engine.snapshotFor(bot);
-            List<GameCommand> legal = engine.legalCommands(bot);
-            BotDecision decision = bots.get(bot).decide(snap, legal);
-            boolean played = decision.command() instanceof PlayPdkCards;
-            engine.apply(decision.command());
-            refresh();
-            if (played) {
-                PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
-                after.lastMove().ifPresent(move -> {
-                    double botX = getScene().getWidth() / 2;
-                    double botY = 100;
-                    Platform.runLater(() -> GameAnimationService.getInstance()
-                            .playCardAnimation(() -> tableCards.playFlyIn(move.cards(), name(bot),
-                                    botX, botY, null), null));
-                    GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type()));
-                });
+            try {
+                GameSnapshot snap = engine.snapshotFor(bot);
+                List<GameCommand> legal = engine.legalCommands(bot);
+                // 状态可能已推进（重入 / 异常重置）：此时不应再替 bot 出牌，直接刷新
+                if (legal.isEmpty()) {
+                    refresh();
+                    return;
+                }
+                BotDecision decision = bots.get(bot).decide(snap, legal);
+                boolean played = decision.command() instanceof PlayPdkCards;
+                engine.apply(decision.command());
+                refresh();
+                if (played) {
+                    PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
+                    after.lastMove().ifPresent(move -> {
+                        double botX = getScene().getWidth() / 2;
+                        double botY = 100;
+                        Platform.runLater(() -> GameAnimationService.getInstance()
+                                .playCardAnimation(() -> tableCards.playFlyIn(move.cards(), name(bot),
+                                        botX, botY, null), null));
+                        GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type()));
+                    });
+                }
+            } catch (Throwable t) {
+                // 异常不能吞：打印堆栈方便诊断，并主动刷新避免"AI 不出牌"卡死
+                t.printStackTrace();
+                refresh();
+            } finally {
+                botScheduled = false;
             }
         });
         pause.play();

@@ -1678,6 +1678,141 @@
 }
 
 /* ================================================================
+   出牌历史面板（PlayHistoryPanel）：替代右侧纯文字日志
+   ================================================================ */
+.history-scroll {
+    -fx-background-color: rgba(8,22,14,0.50);
+    -fx-border-color: rgba(220,184,96,0.35);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+.history-panel {
+    -fx-padding: 6;
+    -fx-spacing: 4;
+}
+.history-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+    -fx-padding: 3 4;
+}
+/* 玩家头像（按动作类型着色） */
+.history-avatar {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-background-radius: 12;
+    -fx-alignment: center;
+}
+.history-avatar-play {
+    -fx-background-color: rgba(224,168,46,0.80);
+}
+.history-avatar-pass {
+    -fx-background-color: rgba(120,120,120,0.70);
+}
+.history-avatar-win {
+    -fx-background-color: rgba(70,194,106,0.80);
+}
+.history-avatar-declare {
+    -fx-background-color: rgba(74,143,231,0.80);
+}
+.history-avatar-trust {
+    -fx-background-color: rgba(100,160,220,0.60);
+}
+.history-avatar-hit {
+    -fx-background-color: rgba(229,72,77,0.85);
+}
+.history-avatar-miss {
+    -fx-background-color: rgba(180,120,40,0.70);
+}
+.history-avatar-clear {
+    -fx-background-color: rgba(140,140,140,0.60);
+}
+.history-avatar-reshuffle {
+    -fx-background-color: rgba(150,80,200,0.65);
+}
+.history-avatar-system {
+    -fx-background-color: rgba(80,80,80,0.60);
+}
+.history-avatar-challenge {
+    -fx-background-color: rgba(224,168,46,0.90);
+}
+.history-avatar-challenge-ok {
+    -fx-background-color: rgba(70,194,106,0.85);
+}
+.history-avatar-challenge-bad {
+    -fx-background-color: rgba(229,72,77,0.85);
+}
+.history-avatar-gun-hit {
+    -fx-background-color: rgba(180,30,30,0.92);
+}
+.history-avatar-gun-miss {
+    -fx-background-color: rgba(200,150,60,0.78);
+}
+.history-avatar-deal {
+    -fx-background-color: rgba(90,110,160,0.70);
+}
+/* 动作文字 */
+.history-action {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(226,236,246,0.88);
+}
+.history-action-play {
+    -fx-text-fill: rgba(224,168,46,0.90);
+    -fx-font-weight: bold;
+}
+.history-action-pass {
+    -fx-text-fill: rgba(160,160,160,0.80);
+}
+.history-action-win {
+    -fx-text-fill: rgba(70,194,106,0.95);
+    -fx-font-weight: bold;
+}
+.history-action-declare {
+    -fx-text-fill: rgba(120,180,255,0.90);
+}
+.history-action-trust {
+    -fx-text-fill: rgba(140,180,220,0.80);
+}
+.history-action-hit {
+    -fx-text-fill: rgba(229,72,77,0.92);
+    -fx-font-weight: bold;
+}
+.history-action-miss {
+    -fx-text-fill: rgba(220,180,100,0.85);
+}
+.history-action-challenge {
+    -fx-text-fill: rgba(255,213,120,0.95);
+    -fx-font-weight: bold;
+}
+.history-action-challenge-ok {
+    -fx-text-fill: rgba(110,225,145,0.95);
+    -fx-font-weight: bold;
+}
+.history-action-challenge-bad {
+    -fx-text-fill: rgba(255,120,124,0.95);
+    -fx-font-weight: bold;
+}
+.history-action-gun-hit {
+    -fx-text-fill: rgba(255,90,90,0.98);
+    -fx-font-weight: bold;
+}
+.history-action-gun-miss {
+    -fx-text-fill: rgba(230,195,120,0.92);
+}
+.history-action-deal {
+    -fx-text-fill: rgba(150,175,225,0.85);
+}
+/* 迷你卡牌行 */
+.history-card-row {
+    -fx-alignment: center;
+    -fx-spacing: 2;
+    -fx-padding: 2 0 0 0;
+}
+.history-card-mini {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 4, 0.2, 0, 2);
+}
+
+/* ================================================================
    胜利庆祝 + 金币栏（第四阶段）：WinCelebration / CoinBar
    ================================================================ */
 
@@ -3087,6 +3222,75 @@
 .liar-seat-status {
     -fx-font-size: 11px;
     -fx-text-fill: rgba(255, 217, 138, 0.95);
+}
+
+/* 左轮枪仓指示行 */
+.liar-chamber-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 3;
+    -fx-padding: 1 0 1 0;
+}
+.liar-chamber-ready {
+    -fx-fill: #6b5526;
+    -fx-stroke: rgba(214, 178, 96, 0.55);
+    -fx-stroke-width: 1;
+}
+.liar-chamber-next {
+    -fx-fill: #a9852f;
+    -fx-stroke: #ffd54f;
+    -fx-stroke-width: 1.6;
+    -fx-effect: dropshadow(gaussian, rgba(255, 213, 79, 0.75), 6, 0.5, 0, 0);
+}
+.liar-chamber-spent {
+    -fx-fill: #2b2b2e;
+    -fx-stroke: rgba(120, 116, 110, 0.45);
+    -fx-stroke-width: 1;
+}
+
+/* 质疑结算中央横幅 */
+.liar-banner-card {
+    -fx-background-color: rgba(12, 10, 10, 0.86);
+    -fx-background-radius: 20;
+    -fx-border-width: 2;
+    -fx-border-radius: 20;
+    -fx-padding: 22 46 22 46;
+    -fx-alignment: center;
+    -fx-spacing: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 30, 0.4, 0, 10);
+}
+.liar-banner-challenge {
+    -fx-border-color: rgba(255, 213, 79, 0.75);
+}
+.liar-banner-success {
+    -fx-border-color: rgba(70, 194, 106, 0.85);
+}
+.liar-banner-danger,
+.liar-banner-gun-hit {
+    -fx-border-color: rgba(229, 72, 77, 0.90);
+}
+.liar-banner-gun-miss {
+    -fx-border-color: rgba(220, 180, 100, 0.80);
+}
+.liar-banner-title {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffe6a0;
+    -fx-alignment: center;
+}
+.liar-banner-success .liar-banner-title {
+    -fx-text-fill: #7fe0a0;
+}
+.liar-banner-danger .liar-banner-title,
+.liar-banner-gun-hit .liar-banner-title {
+    -fx-text-fill: #ff8a8e;
+}
+.liar-banner-gun-miss .liar-banner-title {
+    -fx-text-fill: #ffd98a;
+}
+.liar-banner-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(232, 230, 223, 0.82);
+    -fx-alignment: center;
 }
 
 /* ---------------- 隐藏手牌（牌背） ---------------- */
