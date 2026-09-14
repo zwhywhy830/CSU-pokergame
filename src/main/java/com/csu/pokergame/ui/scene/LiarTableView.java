@@ -418,45 +418,45 @@ public final class LiarTableView extends BorderPane {
 
         // 终局庆祝层：胜利金色星光 / 失败灰化 + 成长反馈面板
         javafx.scene.Node growthPanel = buildGrowthPanel();
-        WinCelebration celebration = new WinCelebration(localWon, subtitle, growthPanel);
+
+        final WinCelebration[] celebrationRef = new WinCelebration[1];
 
         Button again = new Button("重新开始");
         again.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
         again.setOnAction(e -> {
-            celebration.stop();
+            celebrationRef[0].stop();
             shell.transitionTo("liar", SceneTransition.Type.ENTER_GAME);
         });
         Button back = new Button("返回游戏选择");
         back.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-back");
         back.setOnAction(e -> {
-            celebration.stop();
+            celebrationRef[0].stop();
             shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
         });
         HBox buttons = new HBox(22, again, back);
         buttons.setAlignment(Pos.CENTER);
-        StackPane.setAlignment(buttons, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(buttons, new Insets(0, 0, 60, 0));
-        celebration.getChildren().add(buttons);
+
+        celebrationRef[0] = new WinCelebration(localWon, subtitle, growthPanel, buttons);
 
         StackPane root = (StackPane) getCenter();
-        root.getChildren().add(celebration);
+        root.getChildren().add(celebrationRef[0]);
 
         // 结算表现动画
         GameAnimationService anim = GameAnimationService.getInstance();
         if (localWon) {
-            anim.playWinAnimation(root, celebration);
+            anim.playWinAnimation(root, celebrationRef[0]);
         } else {
-            anim.playLoseAnimation(celebration);
+            anim.playLoseAnimation(celebrationRef[0]);
         }
         boolean upgraded = growthForResult != null && growthForResult.upgraded();
         PauseTransition settleDelay = new PauseTransition(Duration.millis(140));
         settleDelay.setOnFinished(e -> {
-            javafx.scene.Node coinTarget = liarCoinBar != null ? liarCoinBar : celebration;
+            javafx.scene.Node coinTarget = liarCoinBar != null ? liarCoinBar : celebrationRef[0];
             anim.playCoinAnimation(growthPanel, coinTarget, null);
             if (upgraded) {
                 anim.playLevelUpAnimation(growthPanel);
             }
-            anim.showToast(celebration, settleToastText(upgraded));
+            anim.showToast(celebrationRef[0], settleToastText(upgraded));
         });
         settleDelay.play();
     }

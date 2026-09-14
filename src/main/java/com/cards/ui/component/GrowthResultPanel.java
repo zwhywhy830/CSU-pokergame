@@ -69,8 +69,8 @@ public final class GrowthResultPanel extends VBox {
                              int expNeed,
                              PlayerGrowthService.LevelUpResult growth) {
         getStyleClass().add("growth-result");
-        setAlignment(Pos.CENTER_LEFT);
-        setSpacing(6);
+        setAlignment(Pos.CENTER);
+        setSpacing(10);
 
         int safeGold = Math.max(0, goldDelta);
         int safeExpGain = Math.max(0, expGain);
@@ -139,13 +139,14 @@ public final class GrowthResultPanel extends VBox {
 
     // ============================================================= 行构建
 
-    /** 一行：左侧定宽标题 + 右侧值节点。 */
+    /** 一行：键右对齐 + 值左对齐，整体在卡片中居中，形成整齐的两列结构。 */
     private static HBox row(String key, Node value) {
         Label keyLabel = new Label(key);
         keyLabel.getStyleClass().add("growth-key");
-        keyLabel.setMinWidth(60);
-        HBox line = new HBox(10, keyLabel, value);
-        line.setAlignment(Pos.CENTER_LEFT);
+        keyLabel.setMinWidth(72);
+        keyLabel.setAlignment(Pos.CENTER_RIGHT);
+        HBox line = new HBox(12, keyLabel, value);
+        line.setAlignment(Pos.CENTER);
         return line;
     }
 
@@ -185,7 +186,7 @@ public final class GrowthResultPanel extends VBox {
 
         VBox box = new VBox(2, title, reward);
         box.getStyleClass().add("growth-upgrade");
-        box.setAlignment(Pos.CENTER_LEFT);
+        box.setAlignment(Pos.CENTER);
         return box;
     }
 }

@@ -384,46 +384,47 @@ public final class PdkTableView extends BorderPane {
         // 胜负庆祝层（胜利金色星光 / 失败灰化遮罩）+ 成长反馈面板
         StackPane root = (StackPane) getCenter();
         javafx.scene.Node growthPanel = buildGrowthPanel();
-        WinCelebration celebration = new WinCelebration(localWon, subtitle.toString().trim(), growthPanel);
 
-        // 操作按钮行：重新开始 / 返回选择游戏（叠在 celebration 之上）
+        final WinCelebration[] celebrationRef = new WinCelebration[1];
+
+        // 操作按钮行：重新开始 / 返回选择游戏（整合进结算卡片底部）
         Button again = new Button("重新开始");
-        again.getStyleClass().add("primary");
+        again.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
         again.setOnAction(e -> {
-            celebration.stop();
-            root.getChildren().remove(celebration);
+            celebrationRef[0].stop();
+            root.getChildren().remove(celebrationRef[0]);
             shell.transitionTo("pdk", SceneTransition.Type.ENTER_GAME);
         });
         Button back = new Button("返回选择游戏");
+        back.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-back");
         back.setOnAction(e -> {
-            celebration.stop();
-            root.getChildren().remove(celebration);
+            celebrationRef[0].stop();
+            root.getChildren().remove(celebrationRef[0]);
             shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
         });
         HBox btnRow = new HBox(22, again, back);
         btnRow.setAlignment(Pos.CENTER);
-        StackPane.setAlignment(btnRow, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(btnRow, new Insets(0, 0, 60, 0));
-        celebration.getChildren().add(btnRow);
 
-        root.getChildren().add(celebration);
+        celebrationRef[0] = new WinCelebration(localWon, subtitle.toString().trim(), growthPanel, btnRow);
+
+        root.getChildren().add(celebrationRef[0]);
 
         // 结算表现动画：胜负动画 + 金币飞入 + 升级光环 + 提示条
         GameAnimationService anim = GameAnimationService.getInstance();
         if (localWon) {
-            anim.playWinAnimation(root, celebration);
+            anim.playWinAnimation(root, celebrationRef[0]);
         } else {
-            anim.playLoseAnimation(celebration);
+            anim.playLoseAnimation(celebrationRef[0]);
         }
         boolean upgraded = growthForResult != null && growthForResult.upgraded();
         PauseTransition settleDelay = new PauseTransition(Duration.millis(140));
         settleDelay.setOnFinished(e -> {
-            javafx.scene.Node coinTarget = coinBar != null ? coinBar : celebration;
+            javafx.scene.Node coinTarget = coinBar != null ? coinBar : celebrationRef[0];
             anim.playCoinAnimation(growthPanel, coinTarget, null);
             if (upgraded) {
                 anim.playLevelUpAnimation(growthPanel);
             }
-            anim.showToast(celebration, settleToastText(upgraded));
+            anim.showToast(celebrationRef[0], settleToastText(upgraded));
         });
         settleDelay.play();
     }
