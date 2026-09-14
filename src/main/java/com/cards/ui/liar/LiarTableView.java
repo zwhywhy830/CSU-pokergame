@@ -2,10 +2,12 @@ package com.cards.ui.liar;
 
 import com.cards.ui.component.CoinBar;
 import com.cards.ui.component.PlayHistoryPanel;
+import com.cards.ui.effect.GameAnimationService;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -29,10 +31,10 @@ import java.util.List;
  * <p>整体为 {@link StackPane}，内部 {@link BorderPane}：
  * <pre>
  *   Top    : [ 当前阶段 ] [ LiarClaimPanel(紧凑) ] [ 剩余生命 ] ...... CoinBar
- *   Center : 环形座位的酒馆桌面
- *              (0,1) AI 1        ← 上
- *              (1,0) AI 2   (1,1) 中央声明卡   (1,2) AI 3
- *              (2,1) 玩家        ← 下
+ *   Center : 环形座位的酒馆桌面（固定方位，上北下南、左西右东）
+ *              (0,1) 北家 AI              ← 上（seats[1]）
+ *              (1,0) 西家 AI   (1,1) 中央声明卡   (1,2) 东家 AI
+ *              (2,1) 玩家（南家，本人）    ← 下（seats[0]）
  *   Bottom : LiarHandView(隐藏牌背) + LiarActionBar(继续 / 质疑)
  *   Right  : 游戏日志
  * </pre>
@@ -109,11 +111,11 @@ public final class LiarTableView extends StackPane {
         VBox centerBox = new VBox(8, claimPanel, riskIndicator);
         centerBox.setAlignment(Pos.CENTER);
 
-        table.add(seats[1], 1, 0);   // 上：AI 1
-        table.add(seats[2], 0, 1);   // 左：AI 2
+        table.add(seats[1], 1, 0);   // 北：顶部中央
+        table.add(seats[2], 0, 1);   // 西：左侧中央
         table.add(centerBox, 1, 1);  // 中：声明卡 + 怀疑度
-        table.add(seats[3], 2, 1);   // 右：AI 3
-        table.add(seats[0], 1, 2);   // 下：本人
+        table.add(seats[3], 2, 1);   // 东：右侧中央
+        table.add(seats[0], 1, 2);   // 南：底部（玩家本人，固定）
 
         // 动画层：粒子 / 光效 / 暗红屏幕
         fxLayer.setMouseTransparent(true);
@@ -160,7 +162,10 @@ public final class LiarTableView extends StackPane {
 
     // ============================================================= 访问器
 
-    /** 第 index 个座位（0 = 本人，1~3 = AI）。 */
+    /**
+     * 按固定方位取座位：0 = 南（本人，底部），1 = 北（顶部），
+     * 2 = 西（左侧），3 = 东（右侧）。index 与 {@code PlayerId.ordinal()} 对齐。
+     */
     public LiarPlayerSeat getSeat(int index) {
         return index >= 0 && index < SEAT_COUNT ? seats[index] : null;
     }

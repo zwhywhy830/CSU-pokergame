@@ -313,7 +313,8 @@ public final class LanGameTableView extends BorderPane {
 
     private void setupLiarSeatProfiles() {
         int userLevel = PlayerManager.getInstance().getProfile().getLevel();
-        String[] names = {"你", "西家", "北家", "东家"};
+        // 与 Liar 容器固定方位一致：0 南（本人）/ 1 北 / 2 西 / 3 东
+        String[] names = {"你", "北家", "西家", "东家"};
         int[] levels = {userLevel, 8, 8, 8};
         PlayerId[] seats = {PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4};
         for (int i = 0; i < seats.length; i++) {
