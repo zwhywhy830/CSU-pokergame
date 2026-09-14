@@ -18,6 +18,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Line;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Sphere;
@@ -56,7 +57,7 @@ public final class WinCelebration extends StackPane {
 
     /** 构造胜利/失败庆祝层。win=true 胜利，win=false 失败。 */
     public WinCelebration(boolean win, String subtitle) {
-        this(win, subtitle, null);
+        this(win, subtitle, null, null);
     }
 
     /**
@@ -65,6 +66,16 @@ public final class WinCelebration extends StackPane {
      * @param extra 附加节点，null 表示不插入；非空时随副标题之后淡入
      */
     public WinCelebration(boolean win, String subtitle, Node extra) {
+        this(win, subtitle, extra, null);
+    }
+
+    /**
+     * 构造胜利/失败庆祝层，支持副标题下的附加内容和卡片底部的操作按钮。
+     *
+     * @param extra   附加节点（成长反馈面板），null 表示不插入
+     * @param actions 操作按钮行，null 表示不插入；非空时置于卡片底部，与内容用分隔线隔开
+     */
+    public WinCelebration(boolean win, String subtitle, Node extra, Node actions) {
         getStyleClass().add("win-overlay");
         setOpacity(0.0);
         setMouseTransparent(false);
@@ -77,7 +88,7 @@ public final class WinCelebration extends StackPane {
         shade.setMouseTransparent(true);
 
         // 内容卡
-        VBox card = new VBox(14);
+        VBox card = new VBox(18);
         card.getStyleClass().addAll("win-card", win ? "win-victory" : "win-defeat");
         card.setAlignment(Pos.CENTER);
         card.setOpacity(0.0);
@@ -134,9 +145,24 @@ public final class WinCelebration extends StackPane {
 
         card.getChildren().addAll(glyph, title, sub);
         if (extra != null) {
-            // 附加内容（成长反馈）从透明起步，在副标题之后淡入
+            // 附加内容（成长反馈）与副标题之间用细分隔线隔开，层次更清晰
+            Line divider = new Line(0, 0, 280, 0);
+            divider.setStroke(Color.web("rgba(255,255,255,0.12)"));
+            divider.setStrokeWidth(1);
+            divider.setOpacity(0.0);
+            card.getChildren().add(divider);
+            // 附加内容从透明起步，在副标题之后淡入
             extra.setOpacity(0.0);
             card.getChildren().add(extra);
+        }
+        if (actions != null) {
+            // 操作按钮行：与上方内容用分隔线隔开，置于卡片底部
+            Line actionDivider = new Line(0, 0, 280, 0);
+            actionDivider.setStroke(Color.web("rgba(255,255,255,0.12)"));
+            actionDivider.setStrokeWidth(1);
+            actionDivider.setOpacity(0.0);
+            actions.setOpacity(0.0);
+            card.getChildren().addAll(actionDivider, actions);
         }
         getChildren().addAll(particleLayer, shade, card);
         StackPane.setAlignment(card, Pos.CENTER);
@@ -179,6 +205,12 @@ public final class WinCelebration extends StackPane {
             entryTimeline.getKeyFrames().addAll(
                     new KeyFrame(Duration.millis(900), new KeyValue(extra.opacityProperty(), 0.0)),
                     new KeyFrame(Duration.millis(1350), new KeyValue(extra.opacityProperty(), 1.0)));
+        }
+        if (actions != null) {
+            // 操作按钮最后淡入
+            entryTimeline.getKeyFrames().addAll(
+                    new KeyFrame(Duration.millis(1200), new KeyValue(actions.opacityProperty(), 0.0)),
+                    new KeyFrame(Duration.millis(1600), new KeyValue(actions.opacityProperty(), 1.0)));
         }
         entryTimeline.play();
     }

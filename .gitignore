@@ -37,3 +37,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Runtime data (local player/account state) ###
+/data/

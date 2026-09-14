@@ -637,41 +637,42 @@ public final class LanGameTableView extends BorderPane {
     private void showCelebration(boolean localWon, String subtitle) {
         StackPane root = (StackPane) getCenter();
         javafx.scene.Node growthPanel = buildGrowthPanel();
-        WinCelebration celebration = new WinCelebration(localWon, subtitle, growthPanel);
+
+        final WinCelebration[] celebrationRef = new WinCelebration[1];
 
         Button again = new Button("重新开始");
-        again.getStyleClass().add("primary");
+        again.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-restart");
         again.setOnAction(e -> {
-            celebration.stop();
-            root.getChildren().remove(celebration);
+            celebrationRef[0].stop();
+            root.getChildren().remove(celebrationRef[0]);
             leaveTable();
         });
         Button back = new Button("返回大厅");
+        back.getStyleClass().addAll("menu-btn", "result-btn", "result-btn-back");
         back.setOnAction(e -> {
-            celebration.stop();
-            root.getChildren().remove(celebration);
+            celebrationRef[0].stop();
+            root.getChildren().remove(celebrationRef[0]);
             leaveTable();
         });
         HBox btnRow = new HBox(22, again, back);
         btnRow.setAlignment(Pos.CENTER);
-        StackPane.setAlignment(btnRow, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(btnRow, new Insets(0, 0, 60, 0));
-        celebration.getChildren().add(btnRow);
 
-        root.getChildren().add(celebration);
+        celebrationRef[0] = new WinCelebration(localWon, subtitle, growthPanel, btnRow);
+
+        root.getChildren().add(celebrationRef[0]);
 
         GameAnimationService anim = GameAnimationService.getInstance();
-        if (localWon) anim.playWinAnimation(root, celebration);
-        else anim.playLoseAnimation(celebration);
+        if (localWon) anim.playWinAnimation(root, celebrationRef[0]);
+        else anim.playLoseAnimation(celebrationRef[0]);
 
         boolean upgraded = growthForResult != null && growthForResult.upgraded();
         PauseTransition delay = new PauseTransition(Duration.millis(140));
         delay.setOnFinished(e -> {
             javafx.scene.Node coinTarget = coinBar != null ? coinBar
-                    : (liarCoinBar != null ? liarCoinBar : celebration);
+                    : (liarCoinBar != null ? liarCoinBar : celebrationRef[0]);
             anim.playCoinAnimation(growthPanel, coinTarget, null);
             if (upgraded) anim.playLevelUpAnimation(growthPanel);
-            anim.showToast(celebration, settleToastText(upgraded));
+            anim.showToast(celebrationRef[0], settleToastText(upgraded));
         });
         delay.play();
     }

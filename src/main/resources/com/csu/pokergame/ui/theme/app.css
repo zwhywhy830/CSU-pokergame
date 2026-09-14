@@ -1693,11 +1693,11 @@
     -fx-border-color: rgba(220,184,96,0.6);
     -fx-border-width: 2;
     -fx-border-radius: 24;
-    -fx-padding: 36 60 36 60;
+    -fx-padding: 40 64 32 64;
     -fx-alignment: center;
-    -fx-spacing: 14;
+    -fx-spacing: 16;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 40, 0.35, 0, 10);
-    -fx-max-width: 540;
+    -fx-max-width: 560;
 }
 
 /* 胜利卡片：金色辉光 */
@@ -1787,16 +1787,17 @@
 
 /* ---------------- 结算成长反馈面板（GrowthResultPanel） ---------------- */
 .growth-result {
-    -fx-padding: 10 4 4 4;
+    -fx-padding: 14 8 8 8;
 }
 .growth-key {
-    -fx-font-size: 12px;
-    -fx-text-fill: rgba(245,248,243,0.55);
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(245,248,243,0.6);
+    -fx-font-weight: bold;
 }
 .growth-value {
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: rgba(245,248,243,0.92);
+    -fx-text-fill: rgba(245,248,243,0.95);
 }
 .growth-value-win {
     -fx-text-fill: #7ee787;
@@ -1816,7 +1817,7 @@
 
 /* 升级高亮块：升级成功 / 升级奖励 */
 .growth-upgrade {
-    -fx-padding: 6 12 6 12;
+    -fx-padding: 8 16 8 16;
     -fx-background-color: rgba(255,213,79,0.12);
     -fx-background-radius: 12;
     -fx-border-color: rgba(255,213,79,0.55);
