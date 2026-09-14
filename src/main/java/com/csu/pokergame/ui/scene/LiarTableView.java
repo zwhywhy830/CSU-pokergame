@@ -67,9 +67,10 @@ import javafx.util.Duration;
  * 简陋的 Label + CardView 实现，引擎交互逻辑（LiarEngine / LiarSnapshot /
  * DeclareLiarCards / bot 调度）保持不变。
  *
- * <p>座位映射（与容器 {@code getSeat(index)} 一致）：
- * index 0 = SEAT_1（本人，底部），1 = SEAT_2（AI1，顶部），
- * 2 = SEAT_3（AI2，左侧），3 = SEAT_4（AI3，右侧）。
+ * <p>座位映射（固定方位，上北下南、左西右东，与容器 {@code getSeat(index)} 一致）：
+ * index 0 = SEAT_1（本人，南 · 底部），1 = SEAT_2（北家 · 顶部中央），
+ * 2 = SEAT_3（西家 · 左侧中央），3 = SEAT_4（东家 · 右侧中央）。
+ * 本人始终固定在南方（底部），不随座位 / 发牌变化。
  */
 public final class LiarTableView extends BorderPane {
 
@@ -82,7 +83,10 @@ public final class LiarTableView extends BorderPane {
     private static final int LIAR_WIN_EXP = 50;
     private static final int LIAR_LOSS_EXP = 20;
 
-    /** 座位顺序与容器 index 一一对应。 */
+    /**
+     * 座位顺序与容器 index（也等于 {@link PlayerId#ordinal()}）一一对应，固定方位不可调换：
+     * 0 = 南（本人，底部），1 = 北（顶部），2 = 西（左侧），3 = 东（右侧）。
+     */
     private static final PlayerId[] SEAT_ORDER = {
             PlayerId.SEAT_1, PlayerId.SEAT_2, PlayerId.SEAT_3, PlayerId.SEAT_4
     };
@@ -172,7 +176,8 @@ public final class LiarTableView extends BorderPane {
     /** 座位名 / 等级：本人用真实等级，三家 AI 固定 8 级（与 deckapp-ui 一致）。 */
     private void setupSeatProfiles() {
         int userLevel = PlayerManager.getInstance().getProfile().getLevel();
-        String[] names = {"你", "西家", "北家", "东家"};
+        // 与容器固定方位一致：0 南（本人）/ 1 北 / 2 西 / 3 东
+        String[] names = {"你", "北家", "西家", "东家"};
         int[] levels = {userLevel, 8, 8, 8};
         for (int i = 0; i < SEAT_ORDER.length; i++) {
             LiarPlayerSeat seat = liarView.getSeat(i);
@@ -719,11 +724,15 @@ public final class LiarTableView extends BorderPane {
         };
     }
 
+    /**
+     * 座位显示名：固定方位（上北下南、左西右东）。
+     * SEAT_1 本人居南（底部），SEAT_2 北，SEAT_3 西，SEAT_4 东。
+     */
     private static String name(PlayerId p) {
         return switch (p) {
             case SEAT_1 -> "你";
-            case SEAT_2 -> "西家";
-            case SEAT_3 -> "北家";
+            case SEAT_2 -> "北家";
+            case SEAT_3 -> "西家";
             case SEAT_4 -> "东家";
         };
     }
