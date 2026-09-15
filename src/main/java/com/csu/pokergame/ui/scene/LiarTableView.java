@@ -1,6 +1,7 @@
 package com.csu.pokergame.ui.scene;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
 import com.cards.ui.component.GrowthResultPanel;
+import com.cards.ui.component.PlayerInteractionBar;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
 import com.cards.ui.liar.LiarActionBar;
@@ -26,6 +28,7 @@ import com.csu.pokergame.core.engine.GameSnapshot;
 import com.csu.pokergame.core.engine.PlayerId;
 import com.csu.pokergame.core.player.BotDecision;
 import com.csu.pokergame.core.player.RuleBotController;
+import com.csu.pokergame.interaction.InteractionService;
 import com.csu.pokergame.liarspoker.ChallengeDeclaration;
 import com.csu.pokergame.liarspoker.DeclareLiarCards;
 import com.csu.pokergame.liarspoker.GunState;
@@ -41,8 +44,8 @@ import com.csu.pokergame.player.CoinService;
 import com.csu.pokergame.player.GameRecordService;
 import com.csu.pokergame.player.PlayerGrowthService;
 import com.csu.pokergame.player.PlayerManager;
+import com.csu.pokergame.player.PlayerProfile;
 import com.csu.pokergame.ui.AppShell;
-import com.cards.ui.component.PlayerInteractionBar;
 
 import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
