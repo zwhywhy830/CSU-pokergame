@@ -128,6 +128,8 @@ public final class LanGameTableView extends BorderPane {
         this.localSeat = PlayerId.SEAT_1;
 
         host.setOnCommand(pc -> Platform.runLater(() -> host.handleRemoteCommand(pc.seat(), pc.command())));
+        // 每条命令生效后主机本地桌面同步重绘（含其他客户端出牌与机器人出牌）
+        host.setOnLocalSnapshot(snap -> Platform.runLater(() -> render(snap)));
         host.setOnEnded(reason -> Platform.runLater(() -> showEnded(reason)));
 
         // 入场费

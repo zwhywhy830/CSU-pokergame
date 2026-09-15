@@ -97,6 +97,8 @@ public final class LanHost {
 
     /** 房间状态变化回调(给 UI 用,UI 应在 JavaFX 线程处理)。 */
     private Consumer<RoomSnapshot> onRoomUpdate;
+    /** 主机本地牌局快照变化回调。每条命令（主机/客户端/机器人）生效后触发，UI 应转到 JavaFX 线程渲染。 */
+    private Consumer<GameSnapshot> onLocalSnapshot;
     /** 对局开始回调。 */
     private Runnable onStartGame;
     /** 收到客户端命令回调(给 UI 用,UI 应在 JavaFX 线程处理)。 */
@@ -136,6 +138,11 @@ public final class LanHost {
 
     public void setOnRoomUpdate(Consumer<RoomSnapshot> cb) {
         this.onRoomUpdate = cb;
+    }
+
+    /** 注册主机本地牌局快照回调（主机 UI 用）。每次命令在引擎生效后触发一次。 */
+    public void setOnLocalSnapshot(Consumer<GameSnapshot> cb) {
+        this.onLocalSnapshot = cb;
     }
 
     public void setOnStartGame(Runnable cb) {
@@ -227,6 +234,10 @@ public final class LanHost {
         // 引擎会校验当前玩家与合法性,非法抛 IllegalArgumentException
         engine.apply(command);
         broadcastSnapshots();
+        // 主机本地 UI 与客户端在同一权威入口收到快照，保证桌面实时同步刷新
+        if (onLocalSnapshot != null) {
+            onLocalSnapshot.accept(engine.snapshotFor(PlayerId.SEAT_1));
+        }
 
         // 检查 winner
         GameSnapshot any = engine.snapshotFor(seat);
@@ -259,6 +270,14 @@ public final class LanHost {
             return null;
         }
         return engine.snapshotFor(PlayerId.SEAT_1);
+    }
+
+    /** 查询某座位当前可执行的合法命令（主机权威，线程安全）。供主机 UI 校验与测试驱动。 */
+    public synchronized List<GameCommand> legalCommands(PlayerId seat) {
+        if (engine == null || ended.get()) {
+            return List.of();
+        }
+        return engine.legalCommands(seat);
     }
 
     /** 结束对局。 */

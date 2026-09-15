@@ -36,6 +36,15 @@ public final class LanClient {
         t.setDaemon(true);
         return t;
     });
+    /**
+     * 出牌命令专用发送线程。{@link #ioExecutor} 被 receiveLoop 长期占用，
+     * 若共用同一个单线程池，submitCommand 的发送任务会永远排在接收循环后面，导致客户端出不了牌。
+     */
+    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "lan-client-send");
+        t.setDaemon(true);
+        return t;
+    });
     private final AtomicBoolean joined = new AtomicBoolean(false);
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -100,7 +109,7 @@ public final class LanClient {
         if (!joined.get() || closed.get()) {
             return;
         }
-        ioExecutor.submit(() -> {
+        sendExecutor.submit(() -> {
             try {
                 send(new WireMessage.SubmitCommand(command));
             } catch (IOException e) {
@@ -119,6 +128,7 @@ public final class LanClient {
     private void shutdownInternal() {
         if (closed.compareAndSet(false, true)) {
             ioExecutor.shutdownNow();
+            sendExecutor.shutdownNow();
             if (socket != null) {
                 try { socket.close(); } catch (IOException ignored) {}
             }
