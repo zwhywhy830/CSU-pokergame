@@ -429,6 +429,9 @@ public final class PdkTableView extends BorderPane {
 
     /** 启动 15 秒出牌倒计时，每秒刷新状态提示，超时自动出牌（最小单张或 pass）。 */
     private void startTurnTimer() {
+        // 互斥不变式：本地倒计时与 AI 显示倒计时任一时刻只能有一个在跑，
+        // 否则两个 Timeline 同时递减共享的 turnSecondsLeft，倒计时会双倍速
+        stopBotDisplayTimer();
         stopTurnTimer();
         turnSecondsLeft = TURN_TIME_LIMIT;
         updateTimerDisplay();
@@ -458,6 +461,8 @@ public final class PdkTableView extends BorderPane {
 
     /** 启动 AI 回合显示用倒计时：只更新秒数显示，超时自动结束（不触发出牌动作）。 */
     private void startBotDisplayTimer() {
+        // 互斥不变式：见 startTurnTimer
+        stopTurnTimer();
         stopBotDisplayTimer();
         turnSecondsLeft = TURN_TIME_LIMIT;
         updateTimerDisplay();
