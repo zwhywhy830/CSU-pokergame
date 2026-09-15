@@ -110,7 +110,6 @@ class JsonCodecTest {
                 Set.of(),
                 List.of(new Card(Rank.ACE, Suit.SPADES)),
                 Optional.empty(),
-                Optional.empty(),
                 Optional.empty());
         byte[] json = JsonCodec.writeBytes(new WireMessage.GameSnapshotMsg(snap));
         WireMessage.GameSnapshotMsg msg = (WireMessage.GameSnapshotMsg) JsonCodec.readMessage(json);

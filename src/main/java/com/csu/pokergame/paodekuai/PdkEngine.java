@@ -80,8 +80,7 @@ public final class PdkEngine implements GameEngine {
                 Set.copyOf(s.closedDoorPlayers()),
                 List.copyOf(s.hands().get(viewer)),
                 Optional.ofNullable(s.faceUpCard()),
-                Optional.ofNullable(s.lastMove()),
-                Optional.ofNullable(s.lastPlayer()));
+                Optional.ofNullable(s.lastMove()));
     }
 
     @Override

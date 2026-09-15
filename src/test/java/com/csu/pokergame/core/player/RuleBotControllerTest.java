@@ -58,7 +58,7 @@ class RuleBotControllerTest {
     private PdkSnapshot pdkSnapshot(Optional<PdkMove> lastMove) {
         return new PdkSnapshot("id", GamePhase.PLAYING, PlayerId.SEAT_1, Optional.empty(), List.of(),
                 Map.of(PlayerId.SEAT_1, 5, PlayerId.SEAT_2, 6, PlayerId.SEAT_3, 6),
-                Set.of(), List.of(), Optional.empty(), lastMove, Optional.empty());
+                Set.of(), List.of(), Optional.empty(), lastMove);
     }
 
     private PdkMove move(List<Card> cards) {

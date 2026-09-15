@@ -1,21 +1,21 @@
 package com.csu.pokergame.ui.scene;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import com.cards.ui.LobbyHelper;
 import com.cards.ui.animation.SceneTransition;
 import com.cards.ui.background.BackgroundManager;
 import com.cards.ui.component.CoinBar;
 import com.cards.ui.component.GrowthResultPanel;
 import com.cards.ui.component.PlayedCardsView;
-import com.cards.ui.component.PlayHistoryPanel;
+import com.cards.ui.component.PlayerInteractionBar;
 import com.cards.ui.effect.GameAnimationService;
 import com.cards.ui.effect.WinCelebration;
-import com.csu.pokergame.player.Achievement;
-import com.csu.pokergame.player.AchievementService;
-import com.csu.pokergame.player.GameRecordService;
-import com.csu.pokergame.player.PlayerGrowthService;
-import com.csu.pokergame.player.PlayerManager;
-import com.csu.pokergame.player.PlayerProfile;
-import com.csu.pokergame.player.PlayerStatsService;
 import com.cards.ui.pdk.PdkHandView;
 import com.cards.ui.pdk.PdkPlayerSeat;
 import com.cards.ui.pdk.PdkTableHeader;
@@ -27,36 +27,40 @@ import com.csu.pokergame.core.engine.GameSnapshot;
 import com.csu.pokergame.core.engine.PlayerId;
 import com.csu.pokergame.core.player.BotDecision;
 import com.csu.pokergame.core.player.RuleBotController;
+import com.csu.pokergame.interaction.InteractionService;
 import com.csu.pokergame.paodekuai.PassPdkTurn;
 import com.csu.pokergame.paodekuai.PdkBotPolicy;
 import com.csu.pokergame.paodekuai.PdkEngine;
-import com.csu.pokergame.paodekuai.PdkSnapshot;
 import com.csu.pokergame.paodekuai.PdkMoveType;
+import com.csu.pokergame.paodekuai.PdkSnapshot;
 import com.csu.pokergame.paodekuai.PlayPdkCards;
+import com.csu.pokergame.player.Achievement;
+import com.csu.pokergame.player.AchievementService;
 import com.csu.pokergame.player.CoinService;
+import com.csu.pokergame.player.GameRecordService;
+import com.csu.pokergame.player.PlayerGrowthService;
+import com.csu.pokergame.player.PlayerManager;
+import com.csu.pokergame.player.PlayerProfile;
+import com.csu.pokergame.player.PlayerStatsService;
 import com.csu.pokergame.ui.AppShell;
+
 import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 
 /**
  * 跑得快游戏桌（本地人机：SEAT_1 为玩家，SEAT_2/SEAT_3 为机器人）。
@@ -96,8 +100,10 @@ public final class PdkTableView extends BorderPane {
     private final PdkPlayerSeat seat3 = new PdkPlayerSeat("♝", "AI2", 8, false);
     private final PlayedCardsView tableCards = new PlayedCardsView();
     private final Label statusText = new Label();
-    private final PlayHistoryPanel log = new PlayHistoryPanel();
+    private final ListView<String> log = new ListView<>();
     private final PdkHandView handView = new PdkHandView(selected);
+    private final Pane fxLayer = new Pane();
+    private PlayerInteractionBar interactionBar;
 
     /** 本局结算闸门：防止 refresh 重入导致重复加金币 / 播放结算动画。 */
     private boolean settled = false;
@@ -141,9 +147,6 @@ public final class PdkTableView extends BorderPane {
         wireActions();
         refresh();
         GameAnimationService.getInstance().installButtonFeedback(this);
-        // 进入跑得快牌桌：切换为斗地主经典风格 BGM（音乐关闭时静默跳过）
-        // 开局不播语音，"要不起"仅在点击"不出"时触发
-        AudioService.getInstance().playMusic(AudioService.BGM_PDK);
     }
 
     private void buildLayout() {
@@ -161,21 +164,30 @@ public final class PdkTableView extends BorderPane {
         table.getStyleClass().add("table-root");
         table.setPrefSize(960, 600);
 
-        // 顶部：比赛信息栏 + AI 玩家座位条（与 buildPdkTableScene 一致）
+        // 顶部：比赛信息栏（玩家分布在牌桌两端：AI1 左、AI2 右、本人下方）
         header.setMode("跑得快");
         header.setBaseScore(GAME_ENTRY_COST);
         coinBar.setCoins(coinService.getGold());
 
-        seat2.setAlignment(Pos.CENTER);
-        seat3.setAlignment(Pos.CENTER);
-        HBox seatStrip = new HBox(60, seat2, seat3);
-        seatStrip.getStyleClass().add("pdk-seat-strip");
-        seatStrip.setAlignment(Pos.CENTER);
-
-        VBox topBar = new VBox(10, header, seatStrip);
+        VBox topBar = new VBox(10, header);
         topBar.setAlignment(Pos.CENTER);
         topBar.setPadding(new Insets(10, 14, 8, 14));
         table.setTop(topBar);
+
+        // 左右两端：AI1 在左、AI2 在右，形成"三端"对峙布局
+        VBox leftSeat = new VBox(seat2);
+        leftSeat.setAlignment(Pos.CENTER);
+        leftSeat.setPadding(new Insets(0, 0, 0, 14));
+        leftSeat.setPrefWidth(200);
+        table.setLeft(leftSeat);
+
+        // 右侧：AI2 座位 + 日志叠放（BorderPane 只能有一个 right 节点）
+        VBox rightCol = new VBox(10, seat3, log);
+        rightCol.setAlignment(Pos.CENTER);
+        rightCol.setPadding(new Insets(0, 14, 0, 0));
+        rightCol.setPrefWidth(220);
+        VBox.setVgrow(log, Priority.ALWAYS);
+        table.setRight(rightCol);
 
         // 中央：玻璃牌桌 + 出牌区 + 状态提示卡
         statusText.getStyleClass().addAll("table-hint", "pdk-status-card");
@@ -189,17 +201,27 @@ public final class PdkTableView extends BorderPane {
         centerWrap.getStyleClass().addAll("table-center-wrap", "pdk-table");
         table.setCenter(centerWrap);
 
-        // 底部：玩家手牌
-        table.setBottom(handView);
+        // 底部：玩家手牌 + 互动按钮条
+        interactionBar = new PlayerInteractionBar(root);
+        VBox bottom = new VBox(8, handView, interactionBar);
+        bottom.setAlignment(Pos.CENTER);
+        table.setBottom(bottom);
 
-        // 右侧：出牌历史面板
-        log.setPrefWidth(220);
+        // 日志样式（已并入右侧 VBox）
+        log.getStyleClass().add("table-log");
         log.setMaxHeight(Double.MAX_VALUE);
-        table.setRight(log);
 
         StackPane.setAlignment(table, Pos.CENTER);
         StackPane.setMargin(table, new Insets(28));
         root.getChildren().add(table);
+
+        // 动画层：透明、鼠标穿透、不参与布局；用于 emoji 飞行 / 撞击粒子
+        fxLayer.setMouseTransparent(true);
+        fxLayer.setPickOnBounds(false);
+        fxLayer.getStyleClass().add("game-particle");
+        fxLayer.prefWidthProperty().bind(root.widthProperty());
+        fxLayer.prefHeightProperty().bind(root.heightProperty());
+        root.getChildren().add(fxLayer);
 
         // 左上角返回按钮
         Button back = new Button("← 返回模式选择");
@@ -219,6 +241,21 @@ public final class PdkTableView extends BorderPane {
         StackPane.setMargin(settings, new Insets(22, 24, 0, 0));
         root.getChildren().add(settings);
 
+        // 注入互动服务：座位头像 + 座位根 + 名字
+        Map<PlayerId, Node> avatars = Map.of(
+                PlayerId.SEAT_1, handView.getSeat().getAvatar(),
+                PlayerId.SEAT_2, seat2.getAvatar(),
+                PlayerId.SEAT_3, seat3.getAvatar());
+        Map<PlayerId, Node> roots = Map.of(
+                PlayerId.SEAT_1, handView.getSeat(),
+                PlayerId.SEAT_2, seat2,
+                PlayerId.SEAT_3, seat3);
+        Map<PlayerId, String> names = Map.of(
+                PlayerId.SEAT_1, "你",
+                PlayerId.SEAT_2, "AI1",
+                PlayerId.SEAT_3, "AI2");
+        InteractionService.getInstance().bind(fxLayer, avatars, roots, names);
+
         setCenter(root);
     }
 
@@ -226,6 +263,17 @@ public final class PdkTableView extends BorderPane {
         handView.getActionBar().getPlayButton().setOnAction(e -> playSelected());
         handView.getActionBar().getPassButton().setOnAction(e -> pass());
         handView.setOnSelectionChange(s -> refreshActions());
+
+        // 互动按钮：投掷类进入目标选择；短语类直接广播
+        interactionBar.setOnInteractionChosen(type ->
+                InteractionService.getInstance().enterTargetingMode(
+                        type,
+                        Set.of(PlayerId.SEAT_2, PlayerId.SEAT_3),
+                        target -> InteractionService.getInstance()
+                                .fireInteraction(LOCAL, target, type, null)));
+        interactionBar.setOnPhraseChosen(phrase ->
+                InteractionService.getInstance().fireInteraction(
+                        LOCAL, LOCAL, phrase.getType(), phrase.getText()));
     }
 
     private void refresh() {
@@ -249,15 +297,10 @@ public final class PdkTableView extends BorderPane {
         PlayerId current = snap.currentPlayer();
         if (current == LOCAL) {
             refreshActions();
-            startTurnTimer();
         } else {
-            stopTurnTimer();
-            stopBotDisplayTimer();
             handView.getActionBar().setPlayEnabled(false);
             handView.getActionBar().setPassEnabled(false);
             handView.setInteractive(false);
-            // AI 回合用显示倒计时（不触发超时自动出牌）
-            startBotDisplayTimer();
             scheduleBotTurn(current);
         }
     }
@@ -267,27 +310,16 @@ public final class PdkTableView extends BorderPane {
         header.setMode("跑得快");
     }
 
-    /** 状态提示卡：展示当前轮次 / 上一手出牌张数 + 倒计时（对应 DeckApp 的 pdkStatusText）。 */
+    /** 状态提示卡：展示当前轮次 / 上一手出牌张数（对应 DeckApp 的 pdkStatusText）。 */
     private void renderStatus(PdkSnapshot snap) {
         StringBuilder text = new StringBuilder();
         if (snap.currentPlayer() == LOCAL) {
             text.append("轮到你出牌");
-            if (turnSecondsLeft > 0) {
-                text.append("  ·  ⏱ ").append(turnSecondsLeft).append("s");
-            }
         } else {
             text.append("等待 ").append(name(snap.currentPlayer())).append(" 出牌");
-            if (turnSecondsLeft > 0) {
-                text.append("  ·  ⏱ ").append(turnSecondsLeft).append("s");
-            }
         }
         snap.lastMove().ifPresent(move -> text.append("  ·  上一手 ").append(move.cards().size()).append(" 张"));
         statusText.setText(text.toString());
-        // 最后 5 秒红色警告样式
-        statusText.getStyleClass().removeAll("timer-warning");
-        if (turnSecondsLeft > 0 && turnSecondsLeft <= 5) {
-            statusText.getStyleClass().add("timer-warning");
-        }
     }
 
     private void renderSeats(PdkSnapshot snap) {
@@ -300,22 +332,20 @@ public final class PdkTableView extends BorderPane {
                 ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
         seat3.setState(snap.currentPlayer() == PlayerId.SEAT_3
                 ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
-        // 所有座位同步倒计时：当前出牌方显示秒数，其他座位隐藏
-        int secs = turnSecondsLeft;
-        handView.getSeat().setTurnTimer(snap.currentPlayer() == LOCAL ? secs : 0);
-        seat2.setTurnTimer(snap.currentPlayer() == PlayerId.SEAT_2 ? secs : 0);
-        seat3.setTurnTimer(snap.currentPlayer() == PlayerId.SEAT_3 ? secs : 0);
     }
 
     private void renderTable(PdkSnapshot snap) {
-        String playerName = snap.lastPlayer().map(PdkTableView::name).orElse(null);
+        // PdkMove 不含出牌者信息，快照也未暴露 lastMover，仅展示牌面
         snap.lastMove().ifPresentOrElse(
-                move -> tableCards.setCards(move.cards(), playerName),
+                move -> tableCards.setCards(move.cards(), null),
                 () -> tableCards.setCards(List.of(), null));
     }
 
     private void renderLog(PdkSnapshot snap) {
-        log.setEvents(snap.publicEvents());
+        log.getItems().setAll(snap.publicEvents());
+        if (!snap.publicEvents().isEmpty()) {
+            log.scrollTo(snap.publicEvents().size() - 1);
+        }
     }
 
     private void renderHand(PdkSnapshot snap) {
@@ -344,8 +374,6 @@ public final class PdkTableView extends BorderPane {
         if (selected.isEmpty()) {
             return;
         }
-        stopTurnTimer();
-        stopBotDisplayTimer();
         // 记录飞牌起点坐标（手牌节点场景坐标）
         List<double[]> flyFrom = new ArrayList<>();
         for (var card : selected) {
@@ -374,10 +402,6 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void pass() {
-        stopTurnTimer();
-        stopBotDisplayTimer();
-        // "要不起"语音包（斗地主经典体验）
-        AudioService.getInstance().playEffect(SoundEffect.PDK_CANNOT_PLAY);
         engine.apply(new PassPdkTurn());
         selected.clear();
         refresh();
@@ -444,6 +468,9 @@ public final class PdkTableView extends BorderPane {
             } finally {
                 botScheduled = false;
             }
+            // AI 偶尔向玩家发起互动（约 15% 概率）
+            InteractionService.getInstance()
+                    .maybeAiInteract(bot, LOCAL, List.of(LOCAL));
         });
         pause.play();
     }
@@ -575,14 +602,12 @@ public final class PdkTableView extends BorderPane {
             return;
         }
         settled = true;
-        stopTurnTimer();
-        stopBotDisplayTimer();
 
         boolean localWon = snap.winner().orElseThrow() == LOCAL;
         // 结算金币（发放胜负奖励），并刷新顶部金币栏
         settlePdk(localWon);
-        // 结算反馈音：胜利 / 失败语音包（跑得快专属）
-        AudioService.getInstance().playEffect(localWon ? SoundEffect.PDK_WIN : SoundEffect.PDK_LOSE);
+        // 结算反馈音：胜利 → WIN，失败 → LOSE
+        AudioService.getInstance().playEffect(localWon ? SoundEffect.WIN : SoundEffect.LOSE);
 
         // 副标题：其余玩家剩余牌数 + 关门倍率
         StringBuilder subtitle = new StringBuilder();

@@ -12,7 +12,6 @@ import java.util.Set;
 
 /**
  * 跑得快快照。viewer 之外的玩家只暴露剩余牌数（remainingCardCounts），不暴露手牌。
- * lastPlayer 为最后出牌者（桌面待压牌的出牌人），供 UI 显示出牌玩家名。
  */
 public record PdkSnapshot(
         String gameId,
@@ -24,6 +23,5 @@ public record PdkSnapshot(
         Set<PlayerId> closedDoorPlayers,
         List<Card> myHand,
         Optional<Card> faceUpCard,
-        Optional<PdkMove> lastMove,
-        Optional<PlayerId> lastPlayer) implements GameSnapshot {
+        Optional<PdkMove> lastMove) implements GameSnapshot {
 }

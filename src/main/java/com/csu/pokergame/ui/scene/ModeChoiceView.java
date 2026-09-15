@@ -100,9 +100,6 @@ public final class ModeChoiceView extends StackPane {
         getChildren().addAll(center, back);
 
         GameAnimationService.getInstance().installButtonFeedback(this);
-        // 从牌桌返回到模式选择：恢复大厅 BGM（音乐关闭时静默跳过）
-        com.csu.pokergame.audio.AudioService.getInstance()
-                .playMusic(com.csu.pokergame.audio.AudioService.BGM_LOBBY);
     }
 
     /** 把 GameChoiceView.SELECTED_GAME 映射为顶部徽标显示的游戏名。 */
