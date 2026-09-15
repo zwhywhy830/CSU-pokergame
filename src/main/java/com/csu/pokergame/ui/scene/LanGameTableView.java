@@ -383,6 +383,8 @@ public final class LanGameTableView extends BorderPane {
 
         // 手牌
         pdkHandView.setCards(snap.myHand());
+        // 本人座位实时同步真实等级（PdkHandView 构造时为占位 Lv.1，必须覆盖）
+        pdkHandView.getSeat().setLevel(PlayerManager.getInstance().getProfile().getLevel());
         pdkHandView.getSeat().setCardCount(snap.myHand().size());
         if (snap.myHand().size() == 1) {
             pdkHeader.setAuxText("报单！你只剩 1 张牌");
@@ -483,6 +485,10 @@ public final class LanGameTableView extends BorderPane {
             LiarPlayerSeat seat = liarView.getSeat(i);
             if (seat == null) continue;
             seat.setPlayerName(name(p));
+            // 本人座位（联机可选座，不一定是 SEAT_1）实时同步真实等级
+            if (p == localSeat) {
+                seat.setLevel(PlayerManager.getInstance().getProfile().getLevel());
+            }
 
             GunState gun = snap.guns().get(p);
             int pulled = gun == null ? 0 : gun.shotsFired();

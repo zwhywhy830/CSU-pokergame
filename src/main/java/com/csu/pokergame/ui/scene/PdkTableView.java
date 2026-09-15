@@ -91,8 +91,9 @@ public final class PdkTableView extends BorderPane {
 
     private final PdkTableHeader header = new PdkTableHeader();
     private final CoinBar coinBar = header.getCoinBar();
-    private final PdkPlayerSeat seat2 = new PdkPlayerSeat("♞", "AI1", 1, false);
-    private final PdkPlayerSeat seat3 = new PdkPlayerSeat("♝", "AI2", 1, false);
+    // AI 座位等级固定 8（与骗子酒馆 LiarTableView 的 AI 口径一致）
+    private final PdkPlayerSeat seat2 = new PdkPlayerSeat("♞", "AI1", 8, false);
+    private final PdkPlayerSeat seat3 = new PdkPlayerSeat("♝", "AI2", 8, false);
     private final PlayedCardsView tableCards = new PlayedCardsView();
     private final Label statusText = new Label();
     private final PlayHistoryPanel log = new PlayHistoryPanel();
@@ -279,6 +280,9 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void renderSeats(PdkSnapshot snap) {
+        // 本人座位实时同步真实等级（PdkHandView 构造时为占位 Lv.1，这里必须覆盖，
+        // 否则牌桌内一直显示 Lv.1，与大厅 / 结算面板的真实等级不一致）
+        handView.getSeat().setLevel(PlayerManager.getInstance().getProfile().getLevel());
         seat2.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_2));
         seat3.setCardCount(snap.remainingCardCounts().get(PlayerId.SEAT_3));
         seat2.setState(snap.currentPlayer() == PlayerId.SEAT_2
@@ -381,6 +385,8 @@ public final class PdkTableView extends BorderPane {
                 List<GameCommand> legal = engine.legalCommands(bot);
                 // 状态可能已推进（重入 / 异常重置）：此时不应再替 bot 出牌，直接刷新
                 if (legal.isEmpty()) {
+                    // 先释放调度锁再 refresh：refresh 会重新调度当前 bot，持锁会导致调度被跳过
+                    botScheduled = false;
                     refresh();
                     return;
                 }
@@ -388,6 +394,9 @@ public final class PdkTableView extends BorderPane {
                 boolean played = decision.command() instanceof PlayPdkCards;
                 boolean passed = decision.command() instanceof PassPdkTurn;
                 engine.apply(decision.command());
+                // 关键：先释放调度锁再 refresh()。refresh 会链式调度下一位 bot，
+                // 若等 finally 才释放，下一位 bot（如 AI2）的调度会被重入锁跳过，造成永不出牌
+                botScheduled = false;
                 refresh();
                 if (passed) {
                     // AI 过牌："要不起"语音包
@@ -407,6 +416,7 @@ public final class PdkTableView extends BorderPane {
             } catch (Throwable t) {
                 // 异常不能吞：打印堆栈方便诊断，并主动刷新避免"AI 不出牌"卡死
                 t.printStackTrace();
+                botScheduled = false;
                 refresh();
             } finally {
                 botScheduled = false;
@@ -484,6 +494,12 @@ public final class PdkTableView extends BorderPane {
      */
     private void onTurnTimeout() {
         if (settled) {
+            return;
+        }
+        // 防御：超时自动出牌只作用于本地玩家回合。AI 回合由 scheduleBotTurn 驱动，
+        // 若倒计时在 AI 回合异常归零，不能替本地玩家（实际会被引擎按当前 AI 执行）误操作
+        PdkSnapshot current = (PdkSnapshot) engine.snapshotFor(LOCAL);
+        if (current.winner().isPresent() || current.currentPlayer() != LOCAL) {
             return;
         }
         List<GameCommand> legal = engine.legalCommands(LOCAL);

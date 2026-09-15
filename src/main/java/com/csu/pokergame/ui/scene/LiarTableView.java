@@ -284,6 +284,10 @@ public final class LiarTableView extends BorderPane {
                 continue;
             }
             seat.setPlayerName(name(p));
+            // 本人座位等级实时同步（局内结算升级后也与档案保持一致），AI 座位保持 setupSeatProfiles 的固定等级
+            if (p == PlayerId.SEAT_1) {
+                seat.setLevel(PlayerManager.getInstance().getProfile().getLevel());
+            }
 
             GunState gun = snap.guns().get(p);
             int pulled = gun == null ? 0 : gun.shotsFired();
