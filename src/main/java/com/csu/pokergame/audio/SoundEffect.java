@@ -10,20 +10,12 @@ public enum SoundEffect {
     COIN_GAIN("/audio/effect/coin.wav"),
     LEVEL_UP("/audio/effect/level_up.wav"),
     ACHIEVEMENT_UNLOCK("/audio/effect/achievement.wav"),
-    /** 骗子酒馆：左轮空仓扣扳机（金属咔哒）。 */
-    GUN_CLICK("/audio/effect/gun_click.wav"),
-    /** 骗子酒馆：中弹枪响。 */
-    GUN_FIRE("/audio/effect/gun_fire.wav"),
-    /** 骗子酒馆：发起质疑时的紧张揭示音。 */
-    CHALLENGE_REVEAL("/audio/effect/challenge_reveal.wav"),
-    /** 跑得快语音包：要不起（本地玩家 / AI 过牌时）。 */
-    PDK_CANNOT_PLAY("/audio/effect/pdk_cannot_play.wav"),
-    /** 跑得快语音包：洗牌发牌。 */
-    PDK_DEAL("/audio/effect/pdk_deal.wav"),
-    /** 跑得快语音包：本局失败。 */
-    PDK_LOSE("/audio/effect/pdk_lose.wav"),
-    /** 跑得快语音包：本局胜利。 */
-    PDK_WIN("/audio/effect/pdk_win.wav");
+    EGG_THROW("/audio/effect/egg_throw.wav"),
+    FLOWER_SEND("/audio/effect/flower_send.wav"),
+    TOMATO_THROW("/audio/effect/tomato_throw.wav"),
+    PHRASE_POSITIVE("/audio/effect/phrase_positive.wav"),
+    PHRASE_NEUTRAL("/audio/effect/phrase_neutral.wav"),
+    PHRASE_TAUNT("/audio/effect/phrase_taunt.wav");
 
     private final String path;
 

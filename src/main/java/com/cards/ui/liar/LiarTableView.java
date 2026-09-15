@@ -1,18 +1,16 @@
 package com.cards.ui.liar;
 
 import com.cards.ui.component.CoinBar;
-import com.cards.ui.component.PlayHistoryPanel;
-import com.cards.ui.effect.GameAnimationService;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
-import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -31,10 +29,10 @@ import java.util.List;
  * <p>整体为 {@link StackPane}，内部 {@link BorderPane}：
  * <pre>
  *   Top    : [ 当前阶段 ] [ LiarClaimPanel(紧凑) ] [ 剩余生命 ] ...... CoinBar
- *   Center : 环形座位的酒馆桌面（固定方位，上北下南、左西右东）
- *              (0,1) 北家 AI              ← 上（seats[1]）
- *              (1,0) 西家 AI   (1,1) 中央声明卡   (1,2) 东家 AI
- *              (2,1) 玩家（南家，本人）    ← 下（seats[0]）
+ *   Center : 环形座位的酒馆桌面
+ *              (0,1) AI 1        ← 上
+ *              (1,0) AI 2   (1,1) 中央声明卡   (1,2) AI 3
+ *              (2,1) 玩家        ← 下
  *   Bottom : LiarHandView(隐藏牌背) + LiarActionBar(继续 / 质疑)
  *   Right  : 游戏日志
  * </pre>
@@ -58,17 +56,11 @@ public final class LiarTableView extends StackPane {
     private final LiarHandView handView = new LiarHandView();
     private final LiarActionBar actionBar = new LiarActionBar();
     private final CoinBar coinBar = new CoinBar();
-    private final PlayHistoryPanel log = new PlayHistoryPanel();
+    private final ListView<String> log = new ListView<>();
 
     private final LiarPlayerSeat[] seats = new LiarPlayerSeat[SEAT_COUNT];
     private final Pane fxLayer = new Pane();
     private final Region dangerFlash = new Region();
-
-    /** 质疑结算分阶段演出横幅（中央大字 + 副标题）。 */
-    private final StackPane bannerLayer = new StackPane();
-    private final VBox bannerCard = new VBox(6);
-    private final Label bannerTitle = new Label();
-    private final Label bannerSubtitle = new Label();
 
     private final BorderPane root = new BorderPane();
     private final GridPane table = new GridPane();
@@ -111,11 +103,11 @@ public final class LiarTableView extends StackPane {
         VBox centerBox = new VBox(8, claimPanel, riskIndicator);
         centerBox.setAlignment(Pos.CENTER);
 
-        table.add(seats[1], 1, 0);   // 北：顶部中央
-        table.add(seats[2], 0, 1);   // 西：左侧中央
+        table.add(seats[1], 1, 0);   // 上：AI 1
+        table.add(seats[2], 0, 1);   // 左：AI 2
         table.add(centerBox, 1, 1);  // 中：声明卡 + 怀疑度
-        table.add(seats[3], 2, 1);   // 东：右侧中央
-        table.add(seats[0], 1, 2);   // 南：底部（玩家本人，固定）
+        table.add(seats[3], 2, 1);   // 右：AI 3
+        table.add(seats[0], 1, 2);   // 下：本人
 
         // 动画层：粒子 / 光效 / 暗红屏幕
         fxLayer.setMouseTransparent(true);
@@ -141,31 +133,18 @@ public final class LiarTableView extends StackPane {
         bottom.getStyleClass().add("liar-bottom");
         root.setBottom(bottom);
 
-        // ---------------- Right：出牌历史面板 ----------------
+        // ---------------- Right：日志 ----------------
+        log.getStyleClass().add("liar-log");
         log.setPrefWidth(232);
         log.setMinWidth(180);
         root.setRight(log);
 
-        // ---------------- 结算演出横幅（最上层，默认隐藏） ----------------
-        bannerTitle.getStyleClass().add("liar-banner-title");
-        bannerSubtitle.getStyleClass().add("liar-banner-subtitle");
-        bannerCard.getStyleClass().add("liar-banner-card");
-        bannerCard.setAlignment(Pos.CENTER);
-        bannerCard.getChildren().addAll(bannerTitle, bannerSubtitle);
-        bannerLayer.setMouseTransparent(true);
-        bannerLayer.setVisible(false);
-        bannerLayer.getChildren().add(bannerCard);
-        StackPane.setAlignment(bannerLayer, Pos.CENTER);
-
-        getChildren().addAll(root, bannerLayer);
+        getChildren().add(root);
     }
 
     // ============================================================= 访问器
 
-    /**
-     * 按固定方位取座位：0 = 南（本人，底部），1 = 北（顶部），
-     * 2 = 西（左侧），3 = 东（右侧）。index 与 {@code PlayerId.ordinal()} 对齐。
-     */
+    /** 第 index 个座位（0 = 本人，1~3 = AI）。 */
     public LiarPlayerSeat getSeat(int index) {
         return index >= 0 && index < SEAT_COUNT ? seats[index] : null;
     }
@@ -206,7 +185,7 @@ public final class LiarTableView extends StackPane {
     }
 
     /** 游戏日志。 */
-    public PlayHistoryPanel getLog() {
+    public ListView<String> getLog() {
         return log;
     }
 
@@ -246,53 +225,16 @@ public final class LiarTableView extends StackPane {
         tipLabel.setManaged(show);
     }
 
-    /** 日志内容（时间顺序，最新在最后）。 */
+    /** 日志内容（保留最近 60 条）。 */
     public void setLogEntries(List<String> entries) {
-        log.setEvents(entries);
+        if (entries == null || entries.isEmpty()) {
+            log.getItems().clear();
+            return;
+        }
+        log.getItems().setAll(entries.subList(Math.max(0, entries.size() - 60), entries.size()));
     }
 
     // ============================================================= 动画
-
-    /**
-     * 显示中央结算横幅（质疑分阶段演出用）。
-     *
-     * @param title    主标题，如「西家 选择质疑！」
-     * @param subtitle 副标题（可 null），如「翻牌验证中…」
-     * @param tone     色调：challenge / success / danger / gun-hit / gun-miss
-     */
-    public void showBanner(String title, String subtitle, String tone) {
-        bannerTitle.setText(title == null ? "" : title);
-        bannerSubtitle.setText(subtitle == null ? "" : subtitle);
-        bannerSubtitle.setVisible(subtitle != null && !subtitle.isBlank());
-        bannerSubtitle.setManaged(subtitle != null && !subtitle.isBlank());
-        bannerCard.getStyleClass().removeAll(
-                "liar-banner-challenge", "liar-banner-success",
-                "liar-banner-danger", "liar-banner-gun-hit", "liar-banner-gun-miss");
-        bannerCard.getStyleClass().add("liar-banner-" + (tone == null ? "challenge" : tone));
-        bannerLayer.setVisible(true);
-        if (!GameAnimationService.getInstance().isEnabled()) {
-            bannerCard.setOpacity(1.0);
-            bannerCard.setScaleX(1.0);
-            bannerCard.setScaleY(1.0);
-            return;
-        }
-        bannerCard.setOpacity(0.0);
-        bannerCard.setScaleX(0.82);
-        bannerCard.setScaleY(0.82);
-        FadeTransition fade = new FadeTransition(Duration.millis(220), bannerCard);
-        fade.setToValue(1.0);
-        fade.play();
-        ScaleTransition pop = new ScaleTransition(Duration.millis(260), bannerCard);
-        pop.setToX(1.0);
-        pop.setToY(1.0);
-        pop.setInterpolator(Interpolator.EASE_OUT);
-        pop.play();
-    }
-
-    /** 隐藏中央结算横幅。 */
-    public void hideBanner() {
-        bannerLayer.setVisible(false);
-    }
 
     /** 质疑结算：暗红屏幕闪烁 + 声明卡震动。 */
     public void playChallengeEffect() {

@@ -55,8 +55,6 @@ public final class LiarPlayerSeat extends HBox {
     private static final double AVATAR_SIZE = 48;
     /** 最大生命值。 */
     private static final int MAX_LIFE = 3;
-    /** 左轮枪仓数。 */
-    private static final int CHAMBER_COUNT = 6;
 
     private final AvatarView avatar;
     private final Circle ring;
@@ -66,9 +64,6 @@ public final class LiarPlayerSeat extends HBox {
     private final Label nameLabel;
     private final Label lifeLabel;
     private final Label statusLabel;
-    /** 左轮枪仓指示行：🔫 + 6 个仓孔（已扣/下一仓/未扣）。 */
-    private final HBox chamberRow = new HBox(3);
-    private final Circle[] chamberDots = new Circle[CHAMBER_COUNT];
 
     private Timeline ringPulse;
     private State state = State.NORMAL;
@@ -128,22 +123,7 @@ public final class LiarPlayerSeat extends HBox {
         statusLabel = new Label();
         statusLabel.getStyleClass().add("liar-seat-status");
 
-        // 左轮枪仓指示：🔫 + 6 个仓孔（子弹位置保密，只显示已扣 / 下一仓 / 未扣）
-        Label gunGlyph = new Label("🔫");
-        gunGlyph.setFont(Font.font("Segoe UI Emoji", 11));
-        chamberRow.setAlignment(Pos.CENTER_LEFT);
-        chamberRow.getStyleClass().add("liar-chamber-row");
-        chamberRow.getChildren().add(gunGlyph);
-        for (int i = 0; i < CHAMBER_COUNT; i++) {
-            Circle dot = new Circle(5);
-            dot.getStyleClass().add("liar-chamber-ready");
-            chamberDots[i] = dot;
-            chamberRow.getChildren().add(dot);
-        }
-        chamberRow.setVisible(false);
-        chamberRow.setManaged(false);
-
-        VBox info = new VBox(1, levelLabel, nameLabel, lifeLabel, chamberRow, statusLabel);
+        VBox info = new VBox(1, levelLabel, nameLabel, lifeLabel, statusLabel);
         info.setAlignment(Pos.CENTER_LEFT);
 
         getChildren().addAll(avatarWrap, info);
@@ -191,34 +171,6 @@ public final class LiarPlayerSeat extends HBox {
     /** 当前生命值。 */
     public int getLife() {
         return life;
-    }
-
-    /**
-     * 设置左轮枪仓状态：按已扣扳机次数渲染 6 个仓孔。
-     * 已扣仓显示为空壳（暗色），下一发要打的仓高亮描边，其余为待发仓。
-     * <b>子弹位置永不展示</b>，只在中弹瞬间由演出揭晓。
-     */
-    public void setChambers(int shotsFired) {
-        int fired = Math.max(0, Math.min(CHAMBER_COUNT, shotsFired));
-        for (int i = 0; i < CHAMBER_COUNT; i++) {
-            Circle dot = chamberDots[i];
-            dot.getStyleClass().removeAll("liar-chamber-spent", "liar-chamber-next", "liar-chamber-ready");
-            if (i < fired) {
-                dot.getStyleClass().add("liar-chamber-spent");
-            } else if (i == fired) {
-                dot.getStyleClass().add("liar-chamber-next");
-            } else {
-                dot.getStyleClass().add("liar-chamber-ready");
-            }
-        }
-        chamberRow.setVisible(true);
-        chamberRow.setManaged(true);
-    }
-
-    /** 隐藏枪仓指示（非骗子酒馆场景使用）。 */
-    public void hideChambers() {
-        chamberRow.setVisible(false);
-        chamberRow.setManaged(false);
     }
 
     /** 设置状态文案（空文本隐藏该行）。 */

@@ -37,8 +37,6 @@ public final class LiarEngine implements GameEngine {
     private final LiarRules rules = new LiarRules();
     private final Random random;
     private LiarState state;
-    /** 上一次的目标点数，用于重洗牌时保证新目标与上次不同。 */
-    private Rank lastTargetRank;
 
     /** 供测试注入已构造状态。 */
     public LiarEngine(LiarState initialState) {
@@ -66,21 +64,13 @@ public final class LiarEngine implements GameEngine {
         return hands;
     }
 
-    /**
-     * 从 K/Q/A 随机抽一张作为目标点数。首次调用完全随机；
-     * 后续调用保证与 {@link #lastTargetRank} 不同（避免连续两轮同点）。
-     */
-    private Rank randomTarget(Random r) {
-        Rank target;
-        do {
-            target = switch (r.nextInt(3)) {
-                case 0 -> Rank.KING;
-                case 1 -> Rank.QUEEN;
-                default -> Rank.ACE;
-            };
-        } while (target == lastTargetRank);
-        lastTargetRank = target;
-        return target;
+    /** 从 K/Q/A 随机抽一张作为整局目标点数。 */
+    private static Rank randomTarget(Random r) {
+        return switch (r.nextInt(3)) {
+            case 0 -> Rank.KING;
+            case 1 -> Rank.QUEEN;
+            default -> Rank.ACE;
+        };
     }
 
     @Override
@@ -209,7 +199,7 @@ public final class LiarEngine implements GameEngine {
         state = new LiarState(s.hands(), s.alive(), s.guns(), s.targetRank(),
                 LiarPhase.DECLARE, next, null,
                 List.of(), s.lastResolution(), s.winner(),
-                withEvent(s.publicEvents(), name(s.responder()) + " 选择相信，轮到其出牌"));
+                withEvent(s.publicEvents(), name(s.responder()) + " 相信，轮到其出牌"));
     }
 
     private void applyChallenge(LiarState s) {
@@ -247,13 +237,10 @@ public final class LiarEngine implements GameEngine {
         LiarPhase phase = winner != null ? LiarPhase.FINISHED : LiarPhase.DECLARE;
         PlayerId nextDeclarer = winner != null ? null : nextAlive(shooter, newAlive);
 
-        // 质疑流程拆成三步入史：发起质疑 → 质疑结果 → 扣扳机结果
+        // 不论中弹与否，都先记录事件
         List<String> events = withEvent(s.publicEvents(),
-                name(s.responder()) + " 选择质疑！");
-        events = appendEvent(events,
-                truthful ? "质疑失败：宣告属实" : "质疑成功：拆穿谎言！");
-        events = appendEvent(events,
-                name(shooter) + (hit ? " 扣扳机——中弹！被淘汰" : " 扣扳机——咔哒，空仓存活"));
+                (truthful ? "宣告属实，" : "宣告被拆穿，") + name(shooter) + " 扣扳机"
+                        + (hit ? "，中弹被淘汰" : "，空仓存活"));
 
         if (winner != null) {
             events = appendEvent(events, name(winner) + " 获胜，对局结束");
@@ -263,27 +250,22 @@ public final class LiarEngine implements GameEngine {
             return;
         }
 
-        // 重新洗牌发牌（保留手枪与淘汰状态），目标点数重新随机定色
-        Random rnd = random != null ? random : new Random();
-        Map<PlayerId, List<Card>> newHands = dealHands(rnd);
-        Rank newTarget = randomTarget(rnd);
-        events = appendEvent(events,
-                "重新洗牌发牌，目标点数 " + newTarget.label() + "，轮到 " + name(nextDeclarer));
-        state = new LiarState(newHands, newAlive, newGuns, newTarget,
+        // 重新洗牌发牌（保留手枪与淘汰状态）
+        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
+        events = appendEvent(events, "重新洗牌发牌，轮到 " + name(nextDeclarer));
+        state = new LiarState(newHands, newAlive, newGuns, s.targetRank(),
                 phase, nextDeclarer, null, List.of(), resolution, winner, events);
     }
 
     // ---------- 辅助 ----------
 
-    /** 出完手牌后的重新洗牌：保留 alive/guns，重新发 hands 并重新随机定色。 */
+    /** 出完手牌后的重新洗牌：保留 alive/guns/targetRank，仅重新发 hands。 */
     private void reshuffleAndDeal(String event, PlayerId nextDeclarer, LiarPhase phase, LiarResolution resolution,
                                  PlayerId winner) {
         LiarState s = state;
-        Random rnd = random != null ? random : new Random();
-        Map<PlayerId, List<Card>> newHands = dealHands(rnd);
-        Rank newTarget = randomTarget(rnd);
-        List<String> events = withEvent(s.publicEvents(), event + "，目标点数 " + newTarget.label());
-        state = new LiarState(newHands, s.alive(), s.guns(), newTarget,
+        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
+        List<String> events = withEvent(s.publicEvents(), event);
+        state = new LiarState(newHands, s.alive(), s.guns(), s.targetRank(),
                 phase, nextDeclarer, null, List.of(),
                 resolution != null ? resolution : s.lastResolution(), winner, events);
     }

@@ -40,7 +40,3 @@ build/
 
 ### Runtime data (local player/account state) ###
 /data/
-
-### Trae IDE 工具临时文件 ###
-.trae/
-webview-data/
