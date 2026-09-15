@@ -2964,7 +2964,7 @@
     -fx-padding: 2 8 2 8;
 }
 
-/* 玩家座位卡片 */
+/* 玩家座位卡片（AI 与本人共用，尺寸适中贴合内容） */
 .pdk-seat {
     -fx-background-color: linear-gradient(to bottom,
             rgba(30, 41, 37, 0.62), rgba(12, 18, 16, 0.50));
@@ -2972,7 +2972,7 @@
     -fx-border-color: rgba(160, 172, 178, 0.35);
     -fx-border-width: 1;
     -fx-border-radius: 14;
-    -fx-padding: 8 14 8 10;
+    -fx-padding: 6 12 6 10;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0.3, 0, 5);
 }
 .pdk-seat-active {
@@ -3013,14 +3013,6 @@
 .pdk-seat-status {
     -fx-font-size: 11px;
     -fx-text-fill: rgba(255, 233, 168, 0.95);
-}
-/* 底部本人座位：去掉卡片外壳，只留头像 + 文字 */
-.pdk-seat-bottom {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-effect: null;
-    -fx-padding: 0 0 0 4;
-    -fx-min-width: 150;
 }
 
 /* 底部玩家区域 */

@@ -53,7 +53,7 @@ public final class PdkHandView extends VBox {
         setAlignment(Pos.CENTER);
 
         seat = new PdkPlayerSeat("♛", "你", 1, true);
-        seat.getStyleClass().add("pdk-seat-bottom");
+        // 玩家座位与 AI 座位使用同一套卡片样式（.pdk-seat），仅身份不同，视觉格式保持一致
 
         cardRow = new HBox(CARD_SPACING);
         cardRow.getStyleClass().add("pdk-hand-row");

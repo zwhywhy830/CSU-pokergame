@@ -80,7 +80,8 @@ public final class PdkPlayerSeat extends HBox {
         getStyleClass().add("pdk-seat");
         setAlignment(Pos.CENTER_LEFT);
         setSpacing(9);
-        setMinWidth(168);
+        // 宽度贴合内容（头像 + 昵称/牌数/状态列），避免短昵称时卡片过宽显空
+        setMinWidth(142);
         if (isSelf) {
             getStyleClass().add("pdk-seat-self");
         }

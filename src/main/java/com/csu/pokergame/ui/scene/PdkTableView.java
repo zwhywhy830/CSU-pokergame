@@ -103,6 +103,10 @@ public final class PdkTableView extends BorderPane {
     private boolean settled = false;
     /** Bot 回合调度锁：防止 refresh 多次触发重复 PauseTransition 叠加。 */
     private boolean botScheduled = false;
+    /** 当前等待中的 bot 出牌定时器，离场时需要取消，避免脱离场景后继续推进引擎。 */
+    private PauseTransition botPause;
+    /** 牌桌已离场（返回大厅 / 重开）：所有定时器回调与 refresh 必须立即短路。 */
+    private boolean disposed = false;
 
     /** 出牌倒计时（15 秒）。轮到任何玩家时启动，超时自动出牌。 */
     private static final int TURN_TIME_LIMIT = 15;
@@ -200,7 +204,10 @@ public final class PdkTableView extends BorderPane {
         // 左上角返回按钮
         Button back = new Button("← 返回模式选择");
         back.getStyleClass().add("game-back");
-        back.setOnAction(e -> shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY));
+        back.setOnAction(e -> {
+            dispose();
+            shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
+        });
         StackPane.setAlignment(back, Pos.TOP_LEFT);
         StackPane.setMargin(back, new Insets(22, 0, 0, 24));
         root.getChildren().add(back);
@@ -222,6 +229,10 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void refresh() {
+        // 离场后定时器 / bot 回调可能仍在事件队列里：直接短路，不能再碰引擎与界面
+        if (disposed) {
+            return;
+        }
         PdkSnapshot snap = (PdkSnapshot) engine.snapshotFor(LOCAL);
         renderHeader(snap);
         renderSeats(snap);
@@ -374,12 +385,17 @@ public final class PdkTableView extends BorderPane {
 
     private void scheduleBotTurn(PlayerId bot) {
         // 重入保护：上一个 bot 定时器还没跑完就不要叠新的，否则 legal 空 → refresh → 再 schedule → 无限循环
-        if (botScheduled) {
+        if (botScheduled || disposed) {
             return;
         }
         botScheduled = true;
         PauseTransition pause = new PauseTransition(Duration.millis(3000));
+        botPause = pause;
         pause.setOnFinished(e -> {
+            // 等待期间玩家可能已返回大厅：不能再推进引擎，否则脱离场景的 AI 链会每 3 秒爆发一次拖卡界面
+            if (disposed) {
+                return;
+            }
             try {
                 GameSnapshot snap = engine.snapshotFor(bot);
                 List<GameCommand> legal = engine.legalCommands(bot);
@@ -405,12 +421,19 @@ public final class PdkTableView extends BorderPane {
                 if (played) {
                     PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
                     after.lastMove().ifPresent(move -> {
-                        double botX = getScene().getWidth() / 2;
+                        // 动画落点依赖场景尺寸；转场期间 getScene() 可能为 null，判空避免 NPE
+                        var scene = getScene();
+                        double botX = scene != null ? scene.getWidth() / 2 : 640;
                         double botY = 100;
-                        Platform.runLater(() -> GameAnimationService.getInstance()
+                        Platform.runLater(() -> {
+                            if (disposed) {
+                                return;
+                            }
+                            GameAnimationService.getInstance()
                                 .playCardAnimation(() -> tableCards.playFlyIn(move.cards(), name(bot),
-                                        botX, botY, null), null));
-                        GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type()));
+                                        botX, botY, null), null);
+                            GameAnimationService.getInstance().showToast(handView, moveTypeLabel(move.type()));
+                        });
                     });
                 }
             } catch (Throwable t) {
@@ -423,6 +446,22 @@ public final class PdkTableView extends BorderPane {
             }
         });
         pause.play();
+    }
+
+    /**
+     * 离开牌桌时清理：停止本地 / AI 倒计时与待触发的 bot 出牌调度。
+     * 否则旧视图被转场移除后，PauseTransition 仍会继续推进引擎并链式调度 bot，
+     * 在脱离场景的节点上播放动画 / 音效，每 3 秒在 FX 线程爆发一次，表现为界面卡死。
+     */
+    private void dispose() {
+        disposed = true;
+        stopTurnTimer();
+        stopBotDisplayTimer();
+        if (botPause != null) {
+            botPause.stop();
+            botPause = null;
+        }
+        botScheduled = false;
     }
 
     // ============================================================= 出牌倒计时
@@ -570,6 +609,7 @@ public final class PdkTableView extends BorderPane {
         again.setOnAction(e -> {
             celebrationRef[0].stop();
             root.getChildren().remove(celebrationRef[0]);
+            dispose();
             shell.transitionTo("pdk", SceneTransition.Type.ENTER_GAME);
         });
         Button back = new Button("返回选择游戏");
@@ -577,6 +617,7 @@ public final class PdkTableView extends BorderPane {
         back.setOnAction(e -> {
             celebrationRef[0].stop();
             root.getChildren().remove(celebrationRef[0]);
+            dispose();
             shell.transitionTo("mode-choice", SceneTransition.Type.RETURN_LOBBY);
         });
         HBox btnRow = new HBox(22, again, back);
