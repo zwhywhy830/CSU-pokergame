@@ -514,7 +514,7 @@ public final class LiarTableView extends BorderPane {
         botScheduledFor = bot;
         System.out.println("[LiarBot] 调度 " + bot + "（" + snap.liarPhase() + "）");
 
-        PauseTransition pause = new PauseTransition(Duration.millis(5000));
+        PauseTransition pause = new PauseTransition(Duration.millis(3000));
         pause.setOnFinished(e -> {
             botScheduled = false;
             botScheduledFor = null;

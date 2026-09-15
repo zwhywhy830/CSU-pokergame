@@ -65,6 +65,8 @@ public final class PdkPlayerSeat extends HBox {
     private final Label nameLabel;
     private final Label countLabel;
     private final Label statusLabel;
+    /** 出牌倒计时显示，仅当前出牌方可见。 */
+    private final Label timerLabel;
 
     private Timeline ringPulse;
 
@@ -123,7 +125,12 @@ public final class PdkPlayerSeat extends HBox {
         statusLabel = new Label();
         statusLabel.getStyleClass().add("pdk-seat-status");
 
-        VBox info = new VBox(1, levelLabel, nameLabel, countLabel, statusLabel);
+        timerLabel = new Label();
+        timerLabel.getStyleClass().add("pdk-seat-timer");
+        timerLabel.setVisible(false);
+        timerLabel.setManaged(false);
+
+        VBox info = new VBox(1, levelLabel, nameLabel, countLabel, statusLabel, timerLabel);
         info.setAlignment(Pos.CENTER_LEFT);
 
         getChildren().addAll(avatarWrap, info);
@@ -151,6 +158,23 @@ public final class PdkPlayerSeat extends HBox {
         }
         countLabel.setVisible(show);
         countLabel.setManaged(show);
+    }
+
+    /**
+     * 设置当前出牌倒计时秒数。
+     * 传正数显示 "⏱ Ns"，并按是否 ≤5 切换警告样式；传 ≤0 隐藏。
+     */
+    public void setTurnTimer(int seconds) {
+        boolean show = seconds > 0;
+        if (show) {
+            timerLabel.setText("⏱ " + seconds + "s");
+            timerLabel.getStyleClass().removeAll("timer-warning");
+            if (seconds <= 5) {
+                timerLabel.getStyleClass().add("timer-warning");
+            }
+        }
+        timerLabel.setVisible(show);
+        timerLabel.setManaged(show);
     }
 
     /** 设置状态文案（空文本隐藏该行）。 */

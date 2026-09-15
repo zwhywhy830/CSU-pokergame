@@ -36,6 +36,7 @@ import com.csu.pokergame.paodekuai.PlayPdkCards;
 import com.csu.pokergame.player.CoinService;
 import com.csu.pokergame.ui.AppShell;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -102,6 +103,13 @@ public final class PdkTableView extends BorderPane {
     /** Bot 回合调度锁：防止 refresh 多次触发重复 PauseTransition 叠加。 */
     private boolean botScheduled = false;
 
+    /** 出牌倒计时（15 秒）。轮到任何玩家时启动，超时自动出牌。 */
+    private static final int TURN_TIME_LIMIT = 15;
+    /** 倒计时时间线。 */
+    private Timeline turnTimer;
+    /** 当前剩余秒数。 */
+    private int turnSecondsLeft;
+
     // ----- 结算成长反馈字段（对应 DeckApp 的 pdkWinForResult 等） -----
     private boolean winForResult;
     private int goldDeltaForResult;
@@ -127,6 +135,7 @@ public final class PdkTableView extends BorderPane {
         refresh();
         GameAnimationService.getInstance().installButtonFeedback(this);
         // 进入跑得快牌桌：切换为斗地主经典风格 BGM（音乐关闭时静默跳过）
+        // 开局不播语音，"要不起"仅在点击"不出"时触发
         AudioService.getInstance().playMusic(AudioService.BGM_PDK);
     }
 
@@ -226,10 +235,14 @@ public final class PdkTableView extends BorderPane {
         PlayerId current = snap.currentPlayer();
         if (current == LOCAL) {
             refreshActions();
+            startTurnTimer();
         } else {
+            stopTurnTimer();
             handView.getActionBar().setPlayEnabled(false);
             handView.getActionBar().setPassEnabled(false);
             handView.setInteractive(false);
+            // AI 回合也启动倒计时，让所有玩家都能看到
+            startTurnTimer();
             scheduleBotTurn(current);
         }
     }
@@ -239,16 +252,27 @@ public final class PdkTableView extends BorderPane {
         header.setMode("跑得快");
     }
 
-    /** 状态提示卡：展示当前轮次 / 上一手出牌张数（对应 DeckApp 的 pdkStatusText）。 */
+    /** 状态提示卡：展示当前轮次 / 上一手出牌张数 + 倒计时（对应 DeckApp 的 pdkStatusText）。 */
     private void renderStatus(PdkSnapshot snap) {
         StringBuilder text = new StringBuilder();
         if (snap.currentPlayer() == LOCAL) {
             text.append("轮到你出牌");
+            if (turnSecondsLeft > 0) {
+                text.append("  ·  ⏱ ").append(turnSecondsLeft).append("s");
+            }
         } else {
             text.append("等待 ").append(name(snap.currentPlayer())).append(" 出牌");
+            if (turnSecondsLeft > 0) {
+                text.append("  ·  ⏱ ").append(turnSecondsLeft).append("s");
+            }
         }
         snap.lastMove().ifPresent(move -> text.append("  ·  上一手 ").append(move.cards().size()).append(" 张"));
         statusText.setText(text.toString());
+        // 最后 5 秒红色警告样式
+        statusText.getStyleClass().removeAll("timer-warning");
+        if (turnSecondsLeft > 0 && turnSecondsLeft <= 5) {
+            statusText.getStyleClass().add("timer-warning");
+        }
     }
 
     private void renderSeats(PdkSnapshot snap) {
@@ -258,6 +282,11 @@ public final class PdkTableView extends BorderPane {
                 ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
         seat3.setState(snap.currentPlayer() == PlayerId.SEAT_3
                 ? PdkPlayerSeat.State.THINKING : PdkPlayerSeat.State.WAITING);
+        // 所有座位同步倒计时：当前出牌方显示秒数，其他座位隐藏
+        int secs = turnSecondsLeft;
+        handView.getSeat().setTurnTimer(snap.currentPlayer() == LOCAL ? secs : 0);
+        seat2.setTurnTimer(snap.currentPlayer() == PlayerId.SEAT_2 ? secs : 0);
+        seat3.setTurnTimer(snap.currentPlayer() == PlayerId.SEAT_3 ? secs : 0);
     }
 
     private void renderTable(PdkSnapshot snap) {
@@ -297,6 +326,7 @@ public final class PdkTableView extends BorderPane {
         if (selected.isEmpty()) {
             return;
         }
+        stopTurnTimer();
         // 记录飞牌起点坐标（手牌节点场景坐标）
         List<double[]> flyFrom = new ArrayList<>();
         for (var card : selected) {
@@ -325,6 +355,9 @@ public final class PdkTableView extends BorderPane {
     }
 
     private void pass() {
+        stopTurnTimer();
+        // "要不起"语音包（斗地主经典体验）
+        AudioService.getInstance().playEffect(SoundEffect.PDK_CANNOT_PLAY);
         engine.apply(new PassPdkTurn());
         selected.clear();
         refresh();
@@ -336,7 +369,7 @@ public final class PdkTableView extends BorderPane {
             return;
         }
         botScheduled = true;
-        PauseTransition pause = new PauseTransition(Duration.millis(5000));
+        PauseTransition pause = new PauseTransition(Duration.millis(3000));
         pause.setOnFinished(e -> {
             try {
                 GameSnapshot snap = engine.snapshotFor(bot);
@@ -348,8 +381,13 @@ public final class PdkTableView extends BorderPane {
                 }
                 BotDecision decision = bots.get(bot).decide(snap, legal);
                 boolean played = decision.command() instanceof PlayPdkCards;
+                boolean passed = decision.command() instanceof PassPdkTurn;
                 engine.apply(decision.command());
                 refresh();
+                if (passed) {
+                    // AI 过牌："要不起"语音包
+                    AudioService.getInstance().playEffect(SoundEffect.PDK_CANNOT_PLAY);
+                }
                 if (played) {
                     PdkSnapshot after = (PdkSnapshot) engine.snapshotFor(LOCAL);
                     after.lastMove().ifPresent(move -> {
@@ -372,6 +410,76 @@ public final class PdkTableView extends BorderPane {
         pause.play();
     }
 
+    // ============================================================= 出牌倒计时
+
+    /** 启动 15 秒出牌倒计时，每秒刷新状态提示，超时自动出牌（最小单张或 pass）。 */
+    private void startTurnTimer() {
+        stopTurnTimer();
+        turnSecondsLeft = TURN_TIME_LIMIT;
+        updateTimerDisplay();
+        turnTimer = new Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1),
+                        e -> {
+                            turnSecondsLeft--;
+                            updateTimerDisplay();
+                            if (turnSecondsLeft <= 0) {
+                                stopTurnTimer();
+                                onTurnTimeout();
+                            }
+                        }));
+        turnTimer.setCycleCount(TURN_TIME_LIMIT);
+        turnTimer.play();
+    }
+
+    /** 停止倒计时并清零显示。 */
+    private void stopTurnTimer() {
+        if (turnTimer != null) {
+            turnTimer.stop();
+            turnTimer = null;
+        }
+        turnSecondsLeft = 0;
+        statusText.getStyleClass().removeAll("timer-warning");
+    }
+
+    /** 刷新状态提示卡上的倒计时显示。 */
+    private void updateTimerDisplay() {
+        PdkSnapshot snap = (PdkSnapshot) engine.snapshotFor(LOCAL);
+        renderStatus(snap);
+    }
+
+    /**
+     * 倒计时超时：自动为本地玩家出牌。
+     * <ul>
+     *   <li>有合法出牌 → 出最小单张（避免错过回合）</li>
+     *   <li>无合法出牌 → pass</li>
+     * </ul>
+     */
+    private void onTurnTimeout() {
+        if (settled) {
+            return;
+        }
+        List<GameCommand> legal = engine.legalCommands(LOCAL);
+        if (legal.isEmpty()) {
+            pass();
+            return;
+        }
+        // 优先选最小单张出牌，避免超时后出大牌
+        GameCommand auto = legal.stream()
+                .filter(c -> c instanceof PlayPdkCards)
+                .map(c -> (PlayPdkCards) c)
+                .min(Comparator.comparingInt(c -> c.cards().size()))
+                .map(c -> (GameCommand) c)
+                .orElseGet(() -> legal.stream()
+                        .filter(c -> c instanceof PassPdkTurn)
+                        .findFirst()
+                        .orElse(legal.get(0)));
+        selected.clear();
+        if (auto instanceof PlayPdkCards ppc) {
+            selected.addAll(ppc.cards());
+        }
+        playSelected();
+    }
+
     private void renderResult(PdkSnapshot snap) {
         // 防重复结算闸门（对应 DeckApp 的 pdkSettled）：第一个进入者完成结算，
         // 之后 refresh 再被触发也不会重复加金币 / 播放结算动画
@@ -379,12 +487,13 @@ public final class PdkTableView extends BorderPane {
             return;
         }
         settled = true;
+        stopTurnTimer();
 
         boolean localWon = snap.winner().orElseThrow() == LOCAL;
         // 结算金币（发放胜负奖励），并刷新顶部金币栏
         settlePdk(localWon);
-        // 结算反馈音：胜利 → WIN，失败 → LOSE
-        AudioService.getInstance().playEffect(localWon ? SoundEffect.WIN : SoundEffect.LOSE);
+        // 结算反馈音：胜利 / 失败语音包（跑得快专属）
+        AudioService.getInstance().playEffect(localWon ? SoundEffect.PDK_WIN : SoundEffect.PDK_LOSE);
 
         // 副标题：其余玩家剩余牌数 + 关门倍率
         StringBuilder subtitle = new StringBuilder();

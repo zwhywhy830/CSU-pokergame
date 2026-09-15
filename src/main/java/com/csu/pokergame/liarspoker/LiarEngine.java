@@ -37,6 +37,8 @@ public final class LiarEngine implements GameEngine {
     private final LiarRules rules = new LiarRules();
     private final Random random;
     private LiarState state;
+    /** 上一次的目标点数，用于重洗牌时保证新目标与上次不同。 */
+    private Rank lastTargetRank;
 
     /** 供测试注入已构造状态。 */
     public LiarEngine(LiarState initialState) {
@@ -64,13 +66,21 @@ public final class LiarEngine implements GameEngine {
         return hands;
     }
 
-    /** 从 K/Q/A 随机抽一张作为整局目标点数。 */
-    private static Rank randomTarget(Random r) {
-        return switch (r.nextInt(3)) {
-            case 0 -> Rank.KING;
-            case 1 -> Rank.QUEEN;
-            default -> Rank.ACE;
-        };
+    /**
+     * 从 K/Q/A 随机抽一张作为目标点数。首次调用完全随机；
+     * 后续调用保证与 {@link #lastTargetRank} 不同（避免连续两轮同点）。
+     */
+    private Rank randomTarget(Random r) {
+        Rank target;
+        do {
+            target = switch (r.nextInt(3)) {
+                case 0 -> Rank.KING;
+                case 1 -> Rank.QUEEN;
+                default -> Rank.ACE;
+            };
+        } while (target == lastTargetRank);
+        lastTargetRank = target;
+        return target;
     }
 
     @Override
@@ -253,22 +263,27 @@ public final class LiarEngine implements GameEngine {
             return;
         }
 
-        // 重新洗牌发牌（保留手枪与淘汰状态）
-        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
-        events = appendEvent(events, "重新洗牌发牌，轮到 " + name(nextDeclarer));
-        state = new LiarState(newHands, newAlive, newGuns, s.targetRank(),
+        // 重新洗牌发牌（保留手枪与淘汰状态），目标点数重新随机定色
+        Random rnd = random != null ? random : new Random();
+        Map<PlayerId, List<Card>> newHands = dealHands(rnd);
+        Rank newTarget = randomTarget(rnd);
+        events = appendEvent(events,
+                "重新洗牌发牌，目标点数 " + newTarget.label() + "，轮到 " + name(nextDeclarer));
+        state = new LiarState(newHands, newAlive, newGuns, newTarget,
                 phase, nextDeclarer, null, List.of(), resolution, winner, events);
     }
 
     // ---------- 辅助 ----------
 
-    /** 出完手牌后的重新洗牌：保留 alive/guns/targetRank，仅重新发 hands。 */
+    /** 出完手牌后的重新洗牌：保留 alive/guns，重新发 hands 并重新随机定色。 */
     private void reshuffleAndDeal(String event, PlayerId nextDeclarer, LiarPhase phase, LiarResolution resolution,
                                  PlayerId winner) {
         LiarState s = state;
-        Map<PlayerId, List<Card>> newHands = dealHands(random != null ? random : new Random());
-        List<String> events = withEvent(s.publicEvents(), event);
-        state = new LiarState(newHands, s.alive(), s.guns(), s.targetRank(),
+        Random rnd = random != null ? random : new Random();
+        Map<PlayerId, List<Card>> newHands = dealHands(rnd);
+        Rank newTarget = randomTarget(rnd);
+        List<String> events = withEvent(s.publicEvents(), event + "，目标点数 " + newTarget.label());
+        state = new LiarState(newHands, s.alive(), s.guns(), newTarget,
                 phase, nextDeclarer, null, List.of(),
                 resolution != null ? resolution : s.lastResolution(), winner, events);
     }

@@ -3067,6 +3067,23 @@
     -fx-font-size: 13px;
     -fx-text-fill: #ffe9a8;
 }
+/* 倒计时最后 5 秒：红色警告 */
+.pdk-status-card.timer-warning {
+    -fx-background-color: rgba(80, 10, 10, 0.65);
+    -fx-border-color: rgba(229, 72, 77, 0.85);
+    -fx-border-width: 2;
+    -fx-text-fill: #ff7075;
+    -fx-font-weight: bold;
+}
+/* 座位上的倒计时 */
+.pdk-seat-timer {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffd54f;
+}
+.pdk-seat-timer.timer-warning {
+    -fx-text-fill: #ff5252;
+}
 
 /* 操作按钮：圆角 40px */
 .pdk-action-bar {

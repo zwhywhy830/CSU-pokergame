@@ -3,9 +3,9 @@ package com.csu.pokergame.audio;
 import com.csu.pokergame.settings.GameSettings;
 import com.csu.pokergame.settings.SettingsService;
 
+import javafx.scene.media.AudioClip;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.util.Duration;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -28,15 +28,19 @@ public final class AudioService {
 
     /** 大厅背景音乐资源路径。 */
     public static final String BGM_LOBBY = "/audio/bgm/lobby.mp3";
-    /** 跑得快局内背景音乐（斗地主经典轻快风）。 */
+    /** 跑得快局内背景音乐（用户提供的斗地主经典风 BGM，WAV 保证解码兼容）。 */
     public static final String BGM_PDK = "/audio/bgm/pdk.wav";
     /** 骗子酒馆局内背景音乐（悬疑紧张风）。 */
     public static final String BGM_LIAR = "/audio/bgm/liar.wav";
 
     private static volatile AudioService instance;
 
-    /** 音效缓存：首次播放时加载，之后复用。 */
-    private final Map<SoundEffect, MediaPlayer> effectCache = new HashMap<>();
+    /**
+     * 音效缓存：首次播放时加载，之后复用。
+     * <p>短音效用 {@link AudioClip}（加载即解码、播放零延迟、可重叠），
+     * 不用 MediaPlayer——后者异步加载，首次 play 时若未 READY 会丢第一声。
+     */
+    private final Map<SoundEffect, AudioClip> effectCache = new HashMap<>();
     private MediaPlayer musicPlayer;
     private String currentMusicPath;
     private String musicSourcePath;
@@ -84,14 +88,12 @@ public final class AudioService {
             return;
         }
         try {
-            MediaPlayer p = effectCache.computeIfAbsent(effect, this::createPlayer);
-            if (p == null) {
+            AudioClip clip = effectCache.computeIfAbsent(effect, this::createClip);
+            if (clip == null) {
                 return;
             }
-            p.stop();
-            p.setVolume(volume);
-            p.seek(Duration.ZERO);
-            p.play();
+            // AudioClip 每次 play 都从头播，多个相同音效可重叠；音量实时传入
+            clip.play(volume);
         } catch (Throwable t) {
             warn("playEffect 失败 " + effect + ": " + t.getMessage());
         }
@@ -138,11 +140,7 @@ public final class AudioService {
     public synchronized void setVolume(double v) {
         this.volume = clamp(v);
         try {
-            for (MediaPlayer p : effectCache.values()) {
-                if (p != null) {
-                    p.setVolume(this.volume);
-                }
-            }
+            // AudioClip 音量在 play(volume) 时传入，无需回写缓存
             if (musicPlayer != null) {
                 musicPlayer.setVolume(this.volume);
                 if (this.volume <= 0) {
@@ -158,16 +156,14 @@ public final class AudioService {
 
     // ============================= 内部
 
-    /** 加载音效播放器；资源不存在 / 格式不支持时返回 null（静默跳过）。 */
-    private MediaPlayer createPlayer(SoundEffect effect) {
+    /** 加载音效片段；资源不存在 / 格式不支持时返回 null（静默跳过）。 */
+    private AudioClip createClip(SoundEffect effect) {
         try {
             String path = effect.getPath();
             if (AudioService.class.getResource(path) == null) {
                 return null;
             }
-            MediaPlayer p = new MediaPlayer(new Media(resolve(path)));
-            p.setVolume(volume);
-            return p;
+            return new AudioClip(resolve(path));
         } catch (Throwable t) {
             warn("加载音效失败 " + effect + ": " + t.getMessage());
             return null;

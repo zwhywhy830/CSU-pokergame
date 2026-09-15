@@ -176,7 +176,10 @@ class LiarEngineTest {
         engine.apply(new ChallengeDeclaration());
         LiarSnapshot s = (LiarSnapshot) engine.snapshotFor(PlayerId.SEAT_1);
         assertThat(s.myHand()).hasSize(5);
-        assertThat(s.targetRank()).isEqualTo(Rank.KING);
+        // 定色重新随机：重洗牌后目标不再沿用旧值，只能是 K / Q / A 之一
+        assertThat(s.targetRank()).isIn(Rank.KING, Rank.QUEEN, Rank.ACE);
+        // 事件中包含新目标点数
+        assertThat(s.publicEvents().stream().anyMatch(e -> e.contains("重新洗牌发牌，目标点数"))).isTrue();
         // 子弹位置不变；质疑者已扣次数 +1
         assertThat(s.guns().get(PlayerId.SEAT_2).shotsFired()).isEqualTo(1);
     }

@@ -111,7 +111,7 @@ class AudioServiceTest {
             assertThat(effect.getPath())
                     .as("音效 %s 资源路径", effect)
                     .startsWith("/audio/effect/")
-                    .endsWith(".wav");
+                    .matches(".*\\.(wav|mp3)$");
             assertThat(AudioService.class.getResource(effect.getPath()))
                     .as("音效资源文件存在: %s", effect.getPath())
                     .isNotNull();
