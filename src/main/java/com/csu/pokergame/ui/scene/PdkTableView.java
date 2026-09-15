@@ -105,8 +105,10 @@ public final class PdkTableView extends BorderPane {
 
     /** 出牌倒计时（15 秒）。轮到任何玩家时启动，超时自动出牌。 */
     private static final int TURN_TIME_LIMIT = 15;
-    /** 倒计时时间线。 */
+    /** 本地玩家倒计时时间线（超时会触发自动出牌）。 */
     private Timeline turnTimer;
+    /** AI 回合显示用倒计时时间线（只更新秒数，不触发超时动作）。 */
+    private Timeline botDisplayTimer;
     /** 当前剩余秒数。 */
     private int turnSecondsLeft;
 
@@ -238,11 +240,12 @@ public final class PdkTableView extends BorderPane {
             startTurnTimer();
         } else {
             stopTurnTimer();
+            stopBotDisplayTimer();
             handView.getActionBar().setPlayEnabled(false);
             handView.getActionBar().setPassEnabled(false);
             handView.setInteractive(false);
-            // AI 回合也启动倒计时，让所有玩家都能看到
-            startTurnTimer();
+            // AI 回合用显示倒计时（不触发超时自动出牌）
+            startBotDisplayTimer();
             scheduleBotTurn(current);
         }
     }
@@ -327,6 +330,7 @@ public final class PdkTableView extends BorderPane {
             return;
         }
         stopTurnTimer();
+        stopBotDisplayTimer();
         // 记录飞牌起点坐标（手牌节点场景坐标）
         List<double[]> flyFrom = new ArrayList<>();
         for (var card : selected) {
@@ -356,6 +360,7 @@ public final class PdkTableView extends BorderPane {
 
     private void pass() {
         stopTurnTimer();
+        stopBotDisplayTimer();
         // "要不起"语音包（斗地主经典体验）
         AudioService.getInstance().playEffect(SoundEffect.PDK_CANNOT_PLAY);
         engine.apply(new PassPdkTurn());
@@ -441,6 +446,29 @@ public final class PdkTableView extends BorderPane {
         statusText.getStyleClass().removeAll("timer-warning");
     }
 
+    /** 启动 AI 回合显示用倒计时：只更新秒数显示，超时自动结束（不触发出牌动作）。 */
+    private void startBotDisplayTimer() {
+        stopBotDisplayTimer();
+        turnSecondsLeft = TURN_TIME_LIMIT;
+        updateTimerDisplay();
+        botDisplayTimer = new Timeline(
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1),
+                        e -> {
+                            turnSecondsLeft--;
+                            updateTimerDisplay();
+                        }));
+        botDisplayTimer.setCycleCount(TURN_TIME_LIMIT);
+        botDisplayTimer.play();
+    }
+
+    /** 停止 AI 回合显示倒计时。 */
+    private void stopBotDisplayTimer() {
+        if (botDisplayTimer != null) {
+            botDisplayTimer.stop();
+            botDisplayTimer = null;
+        }
+    }
+
     /** 刷新状态提示卡上的倒计时显示。 */
     private void updateTimerDisplay() {
         PdkSnapshot snap = (PdkSnapshot) engine.snapshotFor(LOCAL);
@@ -488,6 +516,7 @@ public final class PdkTableView extends BorderPane {
         }
         settled = true;
         stopTurnTimer();
+        stopBotDisplayTimer();
 
         boolean localWon = snap.winner().orElseThrow() == LOCAL;
         // 结算金币（发放胜负奖励），并刷新顶部金币栏
